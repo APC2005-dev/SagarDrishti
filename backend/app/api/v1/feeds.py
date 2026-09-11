@@ -44,5 +44,71 @@ async def feeds(session: SessionDep, settings: SettingsDep) -> list[FeedOut]:
             record_count=latest.row_count if latest else None,
             discovery_method=latest.discovery_method if latest else None,
             error_message=latest.error_message if latest else None,
-        )
+        ),
+        *_environmental_feeds(settings),
     ]
+
+
+def _environmental_feeds(settings) -> list[FeedOut]:  # type: ignore[no-untyped-def]
+    """One entry per configured source (operational and historical). Unconfigured
+    sources are listed with state UNKNOWN and the reason — never with invented data."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import func, select
+    from sqlalchemy.orm import Session
+
+    from app.db.session import sync_engine
+    from app.models.environment import EnvCacheEntry, EnvIngestionRun
+    from app.services.environment_service import EnvironmentService
+
+    feeds: list[FeedOut] = []
+    with Session(sync_engine()) as session:
+        env = EnvironmentService(session, settings)
+        for st in env.status():
+            if st.provider is None or st.spec is None:
+                continue
+            spec = st.spec
+            last = session.execute(
+                select(EnvIngestionRun).where(EnvIngestionRun.provider == st.provider).order_by(EnvIngestionRun.started_at.desc()).limit(1)
+            ).scalar_one_or_none()
+            ok_at = session.execute(
+                select(func.max(EnvIngestionRun.completed_at)).where(EnvIngestionRun.provider == st.provider,
+                                                                     EnvIngestionRun.status.in_(("success", "partial")))
+            ).scalar()
+            n, newest = session.execute(
+                select(func.count(), func.max(EnvCacheEntry.max_valid_date)).where(EnvCacheEntry.provider == st.provider)
+            ).one()
+            if not st.configured:
+                state, reasons = "UNKNOWN", [f"not configured: {st.reason}"]
+            elif last is None:
+                state, reasons = "UNKNOWN", ["no fetch yet"]
+            elif last.status == "failed":
+                recent = ok_at is not None and datetime.now(UTC) - ok_at < timedelta(hours=settings.feed_degraded_after_hours)
+                state, reasons = ("DEGRADED" if recent else "FAILED"), [last.error_message or "last fetch failed"]
+            else:
+                state, reasons = "SYNCED", []
+            feeds.append(FeedOut(
+                id=f"env_{st.role}_{st.group}", name=f"{spec['authority']} — {st.group.replace('_', ' ')} ({st.role})",
+                provider=spec["authority"],
+                description=f"{spec['product_id']} / {spec['dataset_id']}. {spec['aggregation']}. "
+                            f"{('Depth: ' + spec['depth'] + '. ') if spec.get('depth') else ''}{spec.get('notes') or ''}",
+                product_url=(f"https://data.marine.copernicus.eu/product/{spec['product_id']}/description"
+                             if spec["authority"].startswith("Copernicus Marine")
+                             else "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels"),
+                source_url=spec["dataset_id"],
+                cadence=f"{spec['temporal_resolution']} native, daily values; latency ~{spec['latency_days']:g} d",
+                poll_interval_hours=24.0,
+                state=state,  # type: ignore[arg-type]
+                state_reasons=reasons,
+                last_fetch_at=last.started_at if last else None,
+                last_success_at=ok_at,
+                latest_official_observation_date=newest,
+                fetch_duration_ms=last.duration_ms if last else None,
+                checksum_sha256=None,
+                record_count=int(n),
+                discovery_method=st.role,
+                error_message=last.error_message if last and last.status == "failed" else None,
+                category="environmental",
+                configured=st.configured,
+            ))
+    return feeds

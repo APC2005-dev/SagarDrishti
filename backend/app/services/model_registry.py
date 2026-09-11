@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import threading
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,10 +29,12 @@ from app.core.logging import get_logger
 from app.models.ml import ModelMetric, ModelStatusEvent, ModelVersion
 from ml.adapters.production_adapter import STRATEGY_BOOTSTRAP_V1
 from ml.constants import INPUT_SEMANTICS_PRODUCTION
+from ml.features.schemas import get_schema
 from ml.models.artifact_store import WrittenArtifact, copy_version
 from ml.models.model_loader import (
     ModelArtifactError,
     ModelBundle,
+    feature_contract,
     load_model_bundle,
     read_metadata,
     resolve_artifacts_or_none,
@@ -176,12 +178,34 @@ class ModelRegistry:
             )
         self.session.flush()
 
+    def trajectory_fallback(self, champion: ModelVersion) -> ModelVersion | None:
+        """Trajectory-only model to use when an environmental champion lacks inputs.
+
+        ``ENV_FALLBACK_MODEL_VERSION`` if set, else the nearest trajectory-only
+        ancestor of the champion, else v1.
+        """
+        if self.settings.env_fallback_model_version:
+            return self.get(self.settings.env_fallback_model_version)
+        node: ModelVersion | None = champion
+        while node is not None:
+            if node.model_type == "trajectory" and node.status in ("deployed", "validated", "archived"):
+                return node
+            node = self.get(node.parent_version) if node.parent_version else None
+        return self.get("v1")
+
     def _row_from_metadata(self, version: str, directory: Path, meta: dict[str, Any], checksums: dict[str, str], status: str) -> ModelVersion:
         model_path, scaler_path, metadata_path = resolve_artifacts_or_none(directory)
         by_h = (meta.get("metrics") or {}).get("by_horizon") or {}
         cutoff = meta.get("training_data_cutoff")
         training = meta.get("training") or {}
+        _, schema_version = feature_contract(meta)
+        model_type = "base" if version == BASE_VERSION else ("environmental" if get_schema(schema_version).is_environmental else "trajectory")
+        env_cutoff = meta.get("environmental_data_cutoff")
         mv = ModelVersion(
+            model_type=model_type,
+            feature_schema_version=schema_version,
+            environmental_data_sources=meta.get("environmental_data_sources"),
+            environmental_data_cutoff=date.fromisoformat(str(env_cutoff)[:10]) if env_cutoff else None,
             version=version,
             version_number=version_number(version),
             parent_version=meta.get("parent_version"),

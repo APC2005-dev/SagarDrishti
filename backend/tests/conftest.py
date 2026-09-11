@@ -25,6 +25,13 @@ _TMP = Path(tempfile.mkdtemp(prefix="sagar-tests-"))
 os.environ["MODELS_DIR"] = str(_TMP / "models")
 os.environ["RAW_DATA_DIR"] = str(_TMP / "raw")
 os.environ["BASEMAP_CACHE_DIR"] = str(_TMP / "basemap")
+# Environmental tests enable the pipeline explicitly with synthetic providers; nothing
+# in the suite may reach Copernicus / CDS even if real credentials are present in .env.
+os.environ["ENV_ENABLED"] = "false"
+os.environ["ENV_CACHE_DIR"] = str(_TMP / "environment")
+for _cred in ("COPERNICUS_MARINE_USERNAME", "COPERNICUS_MARINE_PASSWORD", "COPERNICUSMARINE_SERVICE_USERNAME",
+              "COPERNICUSMARINE_SERVICE_PASSWORD", "CDSAPI_KEY", "CDS_API_KEY"):
+    os.environ[_cred] = ""
 os.environ["LOG_JSON"] = "false"
 (_TMP / "models").mkdir()
 

@@ -58,6 +58,11 @@ class RetrainingRun(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failure_reason: Mapped[str | None] = mapped_column(Text)
+    # Feature-schema experiment: candidates, selection, ablation, alignment quality.
+    experiment: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+
+MODEL_TYPES = ("base", "trajectory", "environmental")
 
 
 class ModelVersion(Base):
@@ -65,6 +70,7 @@ class ModelVersion(Base):
     __table_args__ = (
         CheckConstraint(_in("status", MODEL_STATUSES), name="status"),
         CheckConstraint("version_number >= 0", name="version_number"),
+        CheckConstraint(_in("model_type", MODEL_TYPES), name="model_type"),
         # At most one champion at any time.
         Index("uq_model_versions_single_deployed", "status", unique=True, postgresql_where=text("status = 'deployed'")),
         {"schema": ML_SCHEMA},
@@ -102,6 +108,10 @@ class ModelVersion(Base):
     retraining_run_id: Mapped[int | None] = mapped_column(ForeignKey(f"{ML_SCHEMA}.retraining_runs.id"))
     deployed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    model_type: Mapped[str] = mapped_column(String(16), server_default="trajectory")
+    feature_schema_version: Mapped[str] = mapped_column(String(48), server_default="trajectory_v1", index=True)
+    environmental_data_sources: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    environmental_data_cutoff: Mapped[date | None] = mapped_column(Date)
 
 
 class ModelStatusEvent(Base):
@@ -183,6 +193,12 @@ class ForecastSet(Base):
     input_features: Mapped[list[list[float]]] = mapped_column(JSONB)
     diagnostics: Mapped[dict[str, Any]] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(String(16), server_default="issued")
+    feature_schema_version: Mapped[str] = mapped_column(String(48), server_default="trajectory_v1")
+    # Per-entry environmental values + provenance (source, valid date, interpolation, quality).
+    environment: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    environment_as_of: Mapped[date | None] = mapped_column(Date)
+    # Set when an environmental champion could not be used and a trajectory model was.
+    fallback: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class Forecast(Base):

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { ApiError, api } from '../api/client';
+import type { EnvGroup } from '../types/api';
 
 const MIN = 60_000;
 
@@ -64,3 +65,12 @@ export const useRetraining = () => useQuery({ queryKey: qk.retraining, queryFn: 
 export const useBasemapInfo = () =>
   useQuery({ queryKey: ['basemap'], queryFn: api.basemap, staleTime: Infinity, retry: 1 });
 export const useFeeds = () => useQuery({ queryKey: qk.feeds, queryFn: api.feeds, refetchInterval: POLL.overview });
+export const useEnvironmentStatus = () =>
+  useQuery({ queryKey: ['environmentStatus'], queryFn: api.environmentStatus, refetchInterval: POLL.models });
+export const useEnvironmentRuns = () =>
+  useQuery({ queryKey: ['environmentRuns'], queryFn: api.environmentRuns, refetchInterval: POLL.overview });
+/** Overlay grids are served from cache only; 404 means "not available", not an error. */
+export const useEnvironmentField = (group: EnvGroup, enabled: boolean) =>
+  useQuery({ queryKey: ['environmentField', group], queryFn: () => api.environmentField(group), enabled, retry: false, staleTime: 30 * MIN });
+export const useIcebergEnvironment = (id: string | null) =>
+  useQuery({ queryKey: ['icebergEnvironment', id ?? ''], queryFn: () => api.icebergEnvironment(id!), enabled: !!id });

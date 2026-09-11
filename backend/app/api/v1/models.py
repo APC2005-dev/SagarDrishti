@@ -15,6 +15,7 @@ from app.schemas.ml import (
     ModelVersionOut,
     StatusEventOut,
 )
+from ml.features.schemas import get_schema
 
 router = APIRouter(prefix="/models", tags=["models"])
 
@@ -42,8 +43,13 @@ async def get_model(version: str, session: SessionDep) -> ModelVersionDetail:
     mv = await queries.model_version(session, version)
     if mv is None:
         raise HTTPException(404, f"model version {version} not found")
+    try:
+        feature_schema = get_schema(mv.feature_schema_version).as_dict()
+    except ValueError:
+        feature_schema = None
     return ModelVersionDetail(
         **ModelVersionOut.model_validate(mv).model_dump(),
+        feature_schema=feature_schema,
         metrics=[MetricOut.model_validate(m) for m in await queries.model_metrics(session, version)],
         status_history=[StatusEventOut.model_validate(e) for e in await queries.status_events(session, version)],
         children=await queries.model_children(session, version),

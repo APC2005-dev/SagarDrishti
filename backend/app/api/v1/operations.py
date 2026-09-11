@@ -28,7 +28,7 @@ def _retraining_out(r: RetrainingRun) -> RetrainingRunOut:
         id=r.id, run_id=str(r.run_id), trigger=r.trigger, status=r.status, champion_version=r.champion_version,
         candidate_version=r.candidate_version, source_data_cutoff=r.source_data_cutoff, sample_count=r.sample_count,
         eligibility=r.eligibility, decision=r.decision, metrics=metrics, started_at=r.started_at,
-        completed_at=r.completed_at, failure_reason=r.failure_reason,
+        completed_at=r.completed_at, failure_reason=r.failure_reason, experiment=r.experiment,
     )
 
 

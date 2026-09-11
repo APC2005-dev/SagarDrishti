@@ -5,8 +5,13 @@ import type {
   Feed,
   ForecastRun,
   ForecastSet,
+  EnvField,
+  EnvGroup,
+  EnvRun,
+  EnvStatus,
   HealthCheck,
   IcebergDetail,
+  IcebergEnvironment,
   IcebergSummary,
   IngestionStatus,
   ModelVersion,
@@ -87,4 +92,8 @@ export const api = {
   basemap: () => get<BasemapInfo>('/basemap'),
   basemapTileUrl: (layer: string, z: number, row: number, col: number) =>
     `${BASE}/basemap/${encodeURIComponent(layer)}/${z}/${row}/${col}.jpeg`,
+  environmentStatus: () => get<EnvStatus>('/environment/status'),
+  environmentRuns: () => get<EnvRun[]>('/environment/runs', { limit: 30 }),
+  environmentField: (group: EnvGroup) => get<EnvField>('/environment/field', { group }),
+  icebergEnvironment: (id: string) => get<IcebergEnvironment>(`/icebergs/${encodeURIComponent(id)}/environment`),
 };

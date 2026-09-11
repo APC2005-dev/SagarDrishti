@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -8,9 +9,11 @@ from sqlalchemy.orm import defer
 
 from app.api.deps import Horizon, IcebergId, Limit, Offset, SessionDep, SettingsDep
 from app.api.serializers import evaluation_out, forecast_set_out, iceberg_summary, to_summary
+from app.models.environment import ObservationEnvironment
 from app.models.tracking import Observation
 from app.repositories import queries
 from app.schemas.common import ERROR_RESPONSES, Page
+from app.schemas.environment import EnvGroupValue, IcebergEnvironment, VectorSummary
 from app.schemas.ml import EvaluationOut, ForecastSetOut
 from app.schemas.tracking import IcebergDetail, IcebergSummary, NearbyObservation, ObservationOut
 
@@ -121,6 +124,56 @@ async def forecast(
     champion = await queries.deployed_model(session)
     fs, points, anchor = rows[0]
     return forecast_set_out(fs, points, anchor, horizon, champion.version if champion else None, settings.stale_after_days, with_inputs=True)
+
+
+@router.get("/{iceberg_id}/environment", response_model=IcebergEnvironment, responses=ERROR_RESPONSES,
+            summary="Wind, ocean current and sea ice aligned to the latest official observation")
+async def environment(iceberg_id: IcebergId, session: SessionDep, settings: SettingsDep) -> IcebergEnvironment:
+    obs = (
+        await session.execute(
+            select(Observation).options(defer(Observation.geom))
+            .where(Observation.iceberg_id == iceberg_id, Observation.provenance == "official_usnic")
+            .order_by(Observation.observation_date.desc()).limit(1)
+        )
+    ).scalar_one_or_none()
+    if obs is None:
+        raise HTTPException(404, f"no official observation for {iceberg_id}")
+    rows = (
+        await session.execute(
+            select(ObservationEnvironment).where(ObservationEnvironment.observation_id == obs.id)
+            .order_by(ObservationEnvironment.group, ObservationEnvironment.as_of.desc())
+        )
+    ).scalars().all()
+    latest: dict[str, ObservationEnvironment] = {}
+    for r in rows:
+        latest.setdefault(r.group, r)
+    if not latest:
+        reason = "environmental features disabled (ENV_ENABLED=false)" if not settings.env_enabled else \
+            "not aligned yet — requires configured Copernicus Marine credentials and the alignment job"
+        return IcebergEnvironment(iceberg_id=iceberg_id, observation_id=obs.id, observation_date=obs.observation_date,
+                                  aligned=False, reason=reason)
+    groups = []
+    for g, r in sorted(latest.items()):
+        vec = None
+        vals = r.values
+        u = vals.get("wind_u") if g == "wind" else vals.get("current_u")
+        v = vals.get("wind_v") if g == "wind" else vals.get("current_v")
+        if g in ("wind", "current") and u is not None and v is not None:
+            speed = math.hypot(u, v)
+            if g == "wind":  # meteorological: direction the wind blows FROM
+                direction = (math.degrees(math.atan2(-u, -v)) + 360) % 360
+                conv = "from"
+            else:  # oceanographic: direction the current flows TOWARDS
+                direction = (math.degrees(math.atan2(u, v)) + 360) % 360
+                conv = "towards"
+            vec = VectorSummary(speed_m_s=round(speed, 3), direction_deg=round(direction, 1), direction_convention=conv)
+        groups.append(EnvGroupValue(
+            group=g, provider=r.provider, dataset_id=r.dataset_id, values=vals, units=r.units, valid_date=r.valid_date,
+            as_of=r.as_of, staleness_days=r.staleness_days, interpolation=r.interpolation, valid_neighbours=r.valid_neighbours,
+            missing=r.missing, reason=r.reason, quality_flags=list(r.quality_flags or []), vector=vec,
+        ))
+    return IcebergEnvironment(iceberg_id=iceberg_id, observation_id=obs.id, observation_date=obs.observation_date,
+                              aligned=True, groups=groups)
 
 
 @router.get("/{iceberg_id}/evaluations", response_model=list[EvaluationOut], summary="Prediction-vs-actual errors for this iceberg")

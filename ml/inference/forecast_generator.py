@@ -41,10 +41,16 @@ def generate_forecasts(
     bundle: ModelBundle,
     sequences: Sequence[ModelInputSequence],
     risk_radius_km_p90: Mapping[int, float | None] | None = None,
+    features: Sequence[np.ndarray] | None = None,
 ) -> list[GeneratedForecast]:
+    """``features`` overrides the (14, 6) trajectory matrices, e.g. with (14, N)
+    trajectory + environmental matrices for an environmental model."""
     if not sequences:
         return []
-    displacement_km = predict_displacements_km(bundle, stack_features([s.features for s in sequences]))
+    matrices = list(features) if features is not None else [s.features for s in sequences]
+    if len(matrices) != len(sequences):
+        raise ValueError("features must align one-to-one with sequences")
+    displacement_km = predict_displacements_km(bundle, stack_features(matrices, bundle.n_features))
     risk = dict(risk_radius_km_p90 or {})
     out: list[GeneratedForecast] = []
     for seq, disp in zip(sequences, displacement_km, strict=True):

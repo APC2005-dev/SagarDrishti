@@ -7,14 +7,14 @@ from sqlalchemy import create_engine, pool
 
 import app.models  # noqa: F401  (register all tables)
 from app.core.config import get_settings
-from app.db.base import ML_SCHEMA, TRACKING_SCHEMA, Base
+from app.db.base import ENV_SCHEMA, ML_SCHEMA, TRACKING_SCHEMA, Base
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
-MANAGED_SCHEMAS = {TRACKING_SCHEMA, ML_SCHEMA}
+MANAGED_SCHEMAS = {TRACKING_SCHEMA, ML_SCHEMA, ENV_SCHEMA}
 
 
 def include_object(obj, name, type_, reflected, compare_to):  # type: ignore[no-untyped-def]

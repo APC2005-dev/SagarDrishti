@@ -13,10 +13,20 @@ layer from the research notebook §5 (the code that produced
 
 NOTE: the written project brief lists the stack without the LayerNormalization
 layer, but the trained artifact contains it (192 params in the notebook's model
-summary). The artifact is authoritative, so the layer stays. Removing it would
-be a new architecture version, not v1.
+summary). The artifact is authoritative, so the layer stays. It is fixed at six
+input features and is never trained with environmental inputs.
 
-New architectures must be added here under a new key; existing keys are frozen.
+``gru_env_concat_entry14_to_day7_v1`` is the first environmental architecture:
+the *same* layer stack with ``Input(14, N)``, N = 6 trajectory features +
+environmental columns concatenated per entry. Keeping the stack identical
+isolates the question "does environmental information help?" from
+architecture changes.
+
+Extension point (not implemented until the concatenated model is established):
+a two-branch model — trajectory GRU → embedding, environmental encoder →
+embedding, fusion → decoder — would be registered here under a new key such
+as ``gru_env_twobranch_entry14_to_day7_v1``, taking the same (14, N) input and
+splitting columns by feature schema. Existing keys are frozen.
 """
 
 from __future__ import annotations
@@ -29,14 +39,16 @@ from ml.constants import ARCHITECTURE_VERSION, N_FEATURES, OUTPUT_SIZE, SEQUENCE
 if TYPE_CHECKING:
     import keras
 
+ENV_CONCAT_ARCHITECTURE_VERSION = "gru_env_concat_entry14_to_day7_v1"
 
-def _build_gru_entry14_to_day7_v1() -> keras.Model:
+
+def _gru_stack(n_features: int) -> keras.Model:
     import keras
     from keras import layers
 
     return keras.Sequential(
         [
-            layers.Input(shape=(SEQUENCE_LENGTH, N_FEATURES)),
+            layers.Input(shape=(SEQUENCE_LENGTH, n_features)),
             layers.GRU(96, dropout=0.10, name="trajectory_gru"),
             layers.LayerNormalization(),
             layers.Dense(128, activation="relu"),
@@ -46,17 +58,30 @@ def _build_gru_entry14_to_day7_v1() -> keras.Model:
     )
 
 
-ARCHITECTURES: dict[str, Callable[[], keras.Model]] = {
+def _build_gru_entry14_to_day7_v1(n_features: int = N_FEATURES) -> keras.Model:
+    if n_features != N_FEATURES:
+        raise ValueError(f"{ARCHITECTURE_VERSION} is fixed at {N_FEATURES} trajectory features (got {n_features})")
+    return _gru_stack(N_FEATURES)
+
+
+def _build_gru_env_concat_entry14_to_day7_v1(n_features: int) -> keras.Model:
+    if n_features <= N_FEATURES:
+        raise ValueError(f"{ENV_CONCAT_ARCHITECTURE_VERSION} needs trajectory + environmental features (> {N_FEATURES})")
+    return _gru_stack(n_features)
+
+
+ARCHITECTURES: dict[str, Callable[..., keras.Model]] = {
     ARCHITECTURE_VERSION: _build_gru_entry14_to_day7_v1,
+    ENV_CONCAT_ARCHITECTURE_VERSION: _build_gru_env_concat_entry14_to_day7_v1,
 }
 
 
-def build_model(architecture_version: str = ARCHITECTURE_VERSION) -> keras.Model:
+def build_model(architecture_version: str = ARCHITECTURE_VERSION, n_features: int | None = None) -> keras.Model:
     try:
         builder = ARCHITECTURES[architecture_version]
     except KeyError as exc:
         raise ValueError(f"unknown architecture_version {architecture_version!r}") from exc
-    return builder()
+    return builder() if n_features is None else builder(n_features)
 
 
 def masked_huber_loss(y_true, y_pred):  # type: ignore[no-untyped-def]

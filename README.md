@@ -221,6 +221,17 @@ p90 per horizon) are computed in SQL. With a weekly source most matches are D+7.
 * Every transition is an `ml.model_status_events` row; lineage is
   `GET /api/v1/models/lineage`.
 
+## Environmental-feature models (wind · ocean current · sea ice)
+
+Starting with versions after v1, retraining can create **environmental model versions** that add per-entry
+wind (`wind_u/v`), surface ocean current (`current_u/v`, 0.494 m) and sea-ice concentration to the six trajectory
+features. The base model and v1 are untouched. Sources: Copernicus Marine (NRT/analysis-forecast for live
+forecasts; GLORYS and reprocessed wind for training) and ERA5 (historical wind). A strict as-of rule prevents any
+future information entering inputs; missing values are never fabricated (complete-case training, recorded
+trajectory-only fallback at inference). Each retraining run trains one candidate per feature schema on identical
+samples and reports whether each variable improved D+1…D+7 against the base model. Full details, source table,
+latency and interpolation methodology: [docs/ENVIRONMENTAL_PIPELINE.md](docs/ENVIRONMENTAL_PIPELINE.md).
+
 ## API
 
 OpenAPI docs: `http://localhost:8000/docs`. All responses are camelCase and typed.

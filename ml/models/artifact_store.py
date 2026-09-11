@@ -68,14 +68,14 @@ def _finalise(tmp: Path, target: Path, metadata: dict[str, Any], extra_files: di
     )
 
 
-def scaler_payload(feature_scaler: Any, target_scaler: Any) -> dict[str, Any]:
-    """Same dict layout the notebook exports (§8)."""
+def scaler_payload(feature_scaler: Any, target_scaler: Any, feature_names: tuple[str, ...] = FEATURE_NAMES) -> dict[str, Any]:
+    """Same dict layout the notebook exports (§8); feature_names = the model's schema columns."""
     return {
         "feature_scaler": feature_scaler,
         "target_scaler": target_scaler,
         "history_days": SEQUENCE_LENGTH,
         "forecast_days": FORECAST_DAYS,
-        "feature_names": list(FEATURE_NAMES),
+        "feature_names": list(feature_names),
     }
 
 
@@ -87,14 +87,17 @@ def write_version(
     target_scaler: Any,
     metadata: dict[str, Any],
     extra_files: dict[str, Any] | None = None,
+    feature_names: tuple[str, ...] = FEATURE_NAMES,
 ) -> WrittenArtifact:
     target = Path(models_root) / version
     if target.exists():
         raise ArtifactExistsError(f"{target} already exists; model versions are immutable")
+    if tuple(metadata.get("feature_names") or feature_names) != tuple(feature_names):
+        raise ValueError("metadata feature_names disagree with the scaler feature_names")
     tmp = Path(tempfile.mkdtemp(prefix=f".{version}-", dir=models_root))
     try:
         model.save(tmp / "model.keras")
-        joblib.dump(scaler_payload(feature_scaler, target_scaler), tmp / "scalers.joblib")
+        joblib.dump(scaler_payload(feature_scaler, target_scaler, feature_names), tmp / "scalers.joblib")
         return _finalise(tmp, target, metadata, extra_files)
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)

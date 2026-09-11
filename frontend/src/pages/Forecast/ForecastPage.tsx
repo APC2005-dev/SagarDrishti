@@ -84,6 +84,7 @@ export default function ForecastPage() {
         <SectionTitle>Model</SectionTitle>
         <div className="kv-grid">
           <KV k="Champion" v={champion ? `${champion.version} · ${champion.architectureVersion}` : 'none deployed'} />
+          <KV k="Feature schema" v={champion ? `${champion.featureSchemaVersion} (${champion.modelType})` : '—'} />
           <KV k="Versions in view" v={versions.join(', ') || '—'} />
           <KV k="Issued" v={issued ? fmtDateTime(issued.last) : '—'} />
           <KV k={`Benchmark D+${horizon} MAE`} v={fmtKm(champion ? (horizon === 1 ? champion.day1Error : horizon === 3 ? champion.day3Error : champion.day7Error) : null)} />

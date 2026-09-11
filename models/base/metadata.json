@@ -16,58 +16,170 @@
   "input_semantics": "consecutive_daily_positions",
   "forecast_horizon_days": 7,
   "output_semantics": "flattened [d1_dx_km, d1_dy_km, ..., d7_dx_km, d7_dy_km] displacement from the last input position, EPSG:3031",
-  "feature_names": ["relative_x_km", "relative_y_km", "vx_km_per_day", "vy_km_per_day", "season_sin", "season_cos"],
+  "feature_names": [
+    "relative_x_km",
+    "relative_y_km",
+    "vx_km_per_day",
+    "vy_km_per_day",
+    "season_sin",
+    "season_cos"
+  ],
   "coordinate_reference_system": "EPSG:3031",
   "artifact_files": {
     "model": "global_gru_trajectory_model.keras",
     "scalers": "global_gru_trajectory_scalers.joblib"
   },
-  "artifact_origin": "original_research_artifact",
+  "artifact_origin": "notebook_run",
   "research_source": {
-    "notebook": "notebooks/01_gru_iceberg_trajectory_model.ipynb",
-    "sections": {"cleaning": 2, "sequences": 3, "split_and_scalers": 4, "training": 5, "evaluation": 6, "export": 8},
-    "original_run": "trained in the original exploratory notebook 01_iceberg_trajectory_xgboost.ipynb (cells 53-61), whose GRU section the cleaned notebook reproduces"
+    "notebook": "notebooks/01_gru_iceberg_trajectory_model.ipynb"
   },
   "training": {
     "dataset": "byu_mers_consolidated_antarctic_iceberg_database_v8.0",
     "dataset_file": "data/bootstrap/consolidated_database_v8.0.zip",
     "clean_position_records": 515500,
     "icebergs": 640,
-    "record_date_range": ["1976-02-01", "2026-04-30"],
+    "record_date_range": [
+      "1976-02-01",
+      "2026-04-30"
+    ],
     "sequence_examples": 477988,
     "split": {
       "method": "chronological, grouped by anchor date, 75 / 12.5 / 12.5",
-      "train": {"examples": 358491, "anchor_dates": ["1979-09-15", "2018-08-23"]},
-      "validation": {"examples": 59765, "anchor_dates": ["2018-08-24", "2022-03-09"]},
-      "test": {"examples": 59732, "anchor_dates": ["2022-03-10", "2026-04-23"]}
+      "train": {
+        "examples": 358491,
+        "anchor_dates": [
+          "1979-09-15",
+          "2018-08-23"
+        ]
+      },
+      "validation": {
+        "examples": 59765,
+        "anchor_dates": [
+          "2018-08-24",
+          "2022-03-09"
+        ]
+      },
+      "test": {
+        "examples": 59732,
+        "anchor_dates": [
+          "2022-03-10",
+          "2026-04-23"
+        ]
+      }
     },
     "optimizer": "Adam(learning_rate=5e-4)",
     "loss": "Huber",
     "batch_size": 512,
     "max_epochs": 65,
-    "epochs_run": 52,
-    "best_epoch": 46,
+    "epochs_run": 59,
+    "best_epoch": 53,
     "seed": 42
   },
   "training_data_cutoff": "2026-04-30",
   "metrics": {
-    "source": "original training run, test-split evaluation output (great-circle error in km)",
+    "source": "notebook section 6 (test phase, great-circle error in km)",
     "protocol": "historical_test_2022-03-10_2026-04-23",
     "by_horizon": {
-      "1": {"n": 59732, "mae_km": 1.255, "median_km": 0.211, "p90_km": 2.088, "rmse_km": null},
-      "3": {"n": 59732, "mae_km": 3.637, "median_km": 0.774, "p90_km": 7.947, "rmse_km": null},
-      "7": {"n": 59732, "mae_km": 10.834, "median_km": 2.842, "p90_km": 28.115, "rmse_km": null}
+      "1": {
+        "n": 59732,
+        "mae_km": 1.2481,
+        "rmse_km": 10.6071,
+        "median_km": 0.2118,
+        "p90_km": 2.0461
+      },
+      "2": {
+        "n": 59732,
+        "mae_km": 2.3111,
+        "rmse_km": 12.2581,
+        "median_km": 0.4347,
+        "p90_km": 4.756
+      },
+      "3": {
+        "n": 59732,
+        "mae_km": 3.6113,
+        "rmse_km": 14.4911,
+        "median_km": 0.7615,
+        "p90_km": 7.9127
+      },
+      "4": {
+        "n": 59732,
+        "mae_km": 5.1716,
+        "rmse_km": 17.0639,
+        "median_km": 1.1951,
+        "p90_km": 12.0531
+      },
+      "5": {
+        "n": 59732,
+        "mae_km": 6.9448,
+        "rmse_km": 20.0147,
+        "median_km": 1.7046,
+        "p90_km": 16.8918
+      },
+      "6": {
+        "n": 59732,
+        "mae_km": 8.8458,
+        "rmse_km": 23.1036,
+        "median_km": 2.2619,
+        "p90_km": 22.4201
+      },
+      "7": {
+        "n": 59732,
+        "mae_km": 10.7805,
+        "rmse_km": 26.1374,
+        "median_km": 2.8209,
+        "p90_km": 27.9853
+      }
     },
     "constant_velocity_benchmark": {
-      "1": {"mae_km": 1.620, "median_km": 0.091, "p90_km": 2.575},
-      "3": {"mae_km": 5.715, "median_km": 0.678, "p90_km": 12.674},
-      "7": {"mae_km": 17.038, "median_km": 3.409, "p90_km": 41.980}
-    },
-    "note": "Horizons 2, 4, 5, 6 and RMSE were not reported by the notebook. Run `make benchmark VERSION=base` to compute all seven horizons on the same split; values are recorded in ml.model_metrics, this file is not rewritten."
+      "1": {
+        "mae_km": 1.6204,
+        "median_km": 0.0908,
+        "p90_km": 2.5747
+      },
+      "2": {
+        "mae_km": 3.4585,
+        "median_km": 0.3112,
+        "p90_km": 7.1429
+      },
+      "3": {
+        "mae_km": 5.7153,
+        "median_km": 0.6782,
+        "p90_km": 12.6735
+      },
+      "4": {
+        "mae_km": 8.2847,
+        "median_km": 1.2105,
+        "p90_km": 19.4125
+      },
+      "5": {
+        "mae_km": 11.0772,
+        "median_km": 1.85,
+        "p90_km": 26.5759
+      },
+      "6": {
+        "mae_km": 14.0336,
+        "median_km": 2.59,
+        "p90_km": 34.0027
+      },
+      "7": {
+        "mae_km": 17.0377,
+        "median_km": 3.4091,
+        "p90_km": 41.9801
+      }
+    }
+  },
+  "risk_radius_km_p90": {
+    "1": 2.046,
+    "2": 4.756,
+    "3": 7.913,
+    "4": 12.053,
+    "5": 16.892,
+    "6": 22.42,
+    "7": 27.985
   },
   "known_limitations": [
     "Trained on consecutive DAILY positions. Operational USNIC entries are weekly; production use goes through ProductionSequenceAdapter, which keeps velocities in km/day but the gap regime is outside the training distribution.",
-    "Scatterometer positions dominate the daily runs; NIC positions in the BYU record are often interpolated between reports (see BYU README)."
+    "Scatterometer positions dominate the daily runs; NIC positions in the BYU record are often interpolated between reports."
   ],
-  "created_at": "2026-09-10"
+  "created_at": "2026-09-11T07:57:08.580770+00:00"
 }

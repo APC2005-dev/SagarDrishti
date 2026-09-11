@@ -68,6 +68,10 @@ def forecast_set_out(
             for p in points
         ],
         input_entries=[InputEntry(**e) for e in fs.input_entries] if with_inputs else None,
+        feature_schema_version=fs.feature_schema_version or "trajectory_v1",
+        environment_as_of=fs.environment_as_of,
+        anchor_environment=(fs.environment[-1] if fs.environment else None) if with_inputs or fs.environment is not None else None,
+        fallback=fs.fallback,
     )
 
 

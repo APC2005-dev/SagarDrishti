@@ -45,6 +45,8 @@ app = FastAPI(
         {"name": "models", "description": "Model registry, lineage and evaluation metrics"},
         {"name": "operations", "description": "Ingestion, forecasting and retraining runs"},
         {"name": "feeds", "description": "Data source status"},
+        {"name": "environment", "description": "Wind / ocean current / sea ice sources, alignment and overlays"},
+        {"name": "basemap", "description": "Static EPSG:3031 basemap tiles (cached proxy)"},
         {"name": "health", "description": "Probes"},
     ],
 )

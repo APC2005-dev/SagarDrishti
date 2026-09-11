@@ -47,6 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     p_bm = sub.add_parser("benchmark")
     p_bm.add_argument("--version", required=True)
     sub.add_parser("status")
+    sub.add_parser("env-status", help="environmental sources, credentials configured (yes/no), schemas trainable")
+    p_ea = sub.add_parser("env-align", help="align environmental state to official observations")
+    p_ea.add_argument("--all-latest", action="store_true", help="latest official fix of every active iceberg (default)")
+    sub.add_parser("env-overlay", help="refresh coarse overlay grids for the map")
+    p_ep = sub.add_parser("env-prefetch", help="pre-warm the environmental cache for a retraining experiment")
+    p_ep.add_argument("--max-samples", type=int, default=None)
     args = parser.parse_args(argv)
     try:
         return _run(args, settings)
@@ -111,8 +117,32 @@ def _run(args: argparse.Namespace, settings: Any) -> int:
             reg = ModelRegistry(session, settings)
             champ = reg.get_deployed()
             _print({"deployed": champ.version if champ else None,
-                    "versions": [(n.version, n.parent_version, n.status) for n in reg.lineage()],
+                    "deployed_feature_schema": champ.feature_schema_version if champ else None,
+                    "versions": [(m.version, m.parent_version, m.status, m.feature_schema_version) for m in reg.list_versions()],
                     "retraining_eligibility": RetrainingService(session, settings).eligibility()})
+        elif args.cmd == "env-status":
+            from app.services.environment_service import EnvironmentService
+            from app.services.retraining_service import RetrainingService
+
+            env = EnvironmentService(session, settings)
+            schemas, unavailable = RetrainingService(session, settings, environment=env).trainable_environmental_schemas()
+            _print({"enabled": settings.env_enabled,
+                    "sources": [{"group": s.group, "role": s.role, "provider": s.provider, "configured": s.configured,
+                                 "reason": s.reason, "dataset_id": (s.spec or {}).get("dataset_id")} for s in env.status()],
+                    "trainable_schemas": [x.version for x in schemas], "unavailable_schemas": unavailable,
+                    "last_runs": env.last_runs()})
+        elif args.cmd == "env-align":
+            from app.services.environment_service import EnvironmentService
+
+            _print(EnvironmentService(session, settings).align_observations())
+        elif args.cmd == "env-overlay":
+            from app.services.environment_service import EnvironmentService
+
+            _print(EnvironmentService(session, settings).refresh_overlay())
+        elif args.cmd == "env-prefetch":
+            from app.services.retraining_service import RetrainingService
+
+            _print(RetrainingService(session, settings).prefetch_environment(args.max_samples))
     return 0
 
 

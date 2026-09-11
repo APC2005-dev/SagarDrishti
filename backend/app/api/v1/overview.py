@@ -3,14 +3,24 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter
+from sqlalchemy import func, select
 
 from app.api.deps import SessionDep, SettingsDep
+from app.models.environment import EnvIngestionRun
 from app.repositories import queries
 from app.schemas.ml import HorizonMetrics
-from app.schemas.operations import ChampionSummary, ForecastRunOut, Overview
+from app.schemas.operations import ChampionSummary, EnvironmentSummary, ForecastRunOut, Overview
 from app.services.status_service import feed_state
+from ml.features.schemas import get_schema
 
 router = APIRouter(prefix="/overview", tags=["overview"])
+
+
+def _schema_description(version: str | None) -> str | None:
+    try:
+        return get_schema(version or "trajectory_v1").description
+    except ValueError:
+        return None
 
 
 @router.get("", response_model=Overview, summary="Mission-control summary for the landing screen")
@@ -51,7 +61,21 @@ async def overview(session: SessionDep, settings: SettingsDep) -> Overview:
             version=champion.version, architecture_version=champion.architecture_version,
             adapter_strategy=champion.adapter_strategy, deployed_at=champion.deployed_at,
             day1_error=champion.day1_error, day3_error=champion.day3_error, day7_error=champion.day7_error,
+            model_type=champion.model_type, feature_schema_version=champion.feature_schema_version,
+            feature_schema_description=_schema_description(champion.feature_schema_version),
+            environmental_sources=sorted({
+                src["dataset_id"] for g in (champion.environmental_data_sources or {}).values() for src in g.values() if src
+            }),
         ) if champion else None,
+        environment=EnvironmentSummary(
+            enabled=settings.env_enabled,
+            configured_groups=sorted({r.group for r in (await session.execute(
+                select(EnvIngestionRun).where(EnvIngestionRun.status == "success", EnvIngestionRun.group.is_not(None)).limit(500)
+            )).scalars() if r.group}),
+            last_sync_at=await session.scalar(
+                select(func.max(EnvIngestionRun.completed_at)).where(EnvIngestionRun.status.in_(("success", "partial")))
+            ),
+        ),
         model_versions=len(await queries.model_versions(session)),
         icebergs_with_active_forecasts=await queries.active_forecast_count(session, champion.version if champion else None),
         last_forecast_run=ForecastRunOut.model_validate(fruns[0]) if fruns else None,

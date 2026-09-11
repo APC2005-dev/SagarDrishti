@@ -78,6 +78,7 @@ class RetrainingRunOut(ApiModel):
     started_at: datetime
     completed_at: datetime | None
     failure_reason: str | None
+    experiment: dict[str, Any] | None = None
 
 
 class RetrainingStatus(ApiModel):
@@ -106,6 +107,8 @@ class FeedOut(ApiModel):
     record_count: int | None
     discovery_method: str | None
     error_message: str | None
+    category: str = "iceberg"  # iceberg | environmental
+    configured: bool = True
 
 
 class ChampionSummary(ApiModel):
@@ -116,6 +119,16 @@ class ChampionSummary(ApiModel):
     day1_error: float | None
     day3_error: float | None
     day7_error: float | None
+    model_type: str = "trajectory"
+    feature_schema_version: str = "trajectory_v1"
+    feature_schema_description: str | None = None
+    environmental_sources: list[str] = []
+
+
+class EnvironmentSummary(ApiModel):
+    enabled: bool
+    configured_groups: list[str]
+    last_sync_at: datetime | None
 
 
 class Overview(ApiModel):
@@ -139,6 +152,7 @@ class Overview(ApiModel):
     evaluations_total: int
     retraining_status: str | None
     pipeline_state: FeedStateLiteral
+    environment: EnvironmentSummary | None = None
 
 
 class HealthCheck(ApiModel):

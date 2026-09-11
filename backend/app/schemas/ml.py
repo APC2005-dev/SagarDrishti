@@ -27,6 +27,7 @@ class InputEntry(ApiModel):
     longitude: float
     provenance: Provenance
     elapsed_days: float
+    environment: dict[str, Any] | None = Field(None, description="Per-group values used for this entry (environmental models only)")
 
 
 class AnchorObservation(ApiModel):
@@ -51,6 +52,10 @@ class ForecastSetOut(ApiModel):
     anchor: AnchorObservation
     points: list[ForecastPoint]
     input_entries: list[InputEntry] | None = None
+    feature_schema_version: str = Field("trajectory_v1", description="Feature schema of the model that produced this forecast")
+    environment_as_of: date | None = Field(None, description="Prediction date T used for environmental inputs (as-of rule)")
+    anchor_environment: dict[str, Any] | None = Field(None, description="Environmental values used at the anchor entry, per group, with provenance")
+    fallback: dict[str, Any] | None = Field(None, description="Set when an environmental champion could not be used and a trajectory model was")
 
 
 class ForecastRow(ApiModel):
@@ -112,9 +117,14 @@ class ModelVersionOut(ApiModel):
     status_reason: str | None
     deployed_at: datetime | None
     created_at: datetime
+    model_type: str = Field("trajectory", description="base | trajectory | environmental")
+    feature_schema_version: str = "trajectory_v1"
+    environmental_data_sources: dict[str, Any] | None = None
+    environmental_data_cutoff: date | None = None
 
 
 class ModelVersionDetail(ModelVersionOut):
+    feature_schema: dict[str, Any] | None = None
     metrics: list[MetricOut]
     status_history: list[StatusEventOut]
     children: list[str]

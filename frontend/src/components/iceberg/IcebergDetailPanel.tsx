@@ -9,6 +9,7 @@ import { formatLat, formatLon, haversineKm } from '../../utils/projection';
 import { KV, SectionTitle } from '../common/Metric';
 import { QueryState } from '../common/QueryState';
 import { ProvenanceChip, RunStatusChip, StaleChip } from '../common/StatusChip';
+import { EnvironmentSection } from './EnvironmentSection';
 import { TrackChart } from './TrackChart';
 
 export function IcebergDetailPanel({ icebergId }: { icebergId: string }) {
@@ -92,7 +93,20 @@ export function IcebergDetailPanel({ icebergId }: { icebergId: string }) {
                   <KV k="Model" v={`${f.modelVersion}${f.isChampion ? ' (champion)' : ''}`} />
                   <KV k="Issued" v={fmtDateTime(f.generatedAt)} />
                   <KV k="From official fix" v={fmtDate(f.latestObservationDate)} />
+                  <KV k="Feature schema" v={f.featureSchemaVersion} />
+                  <KV k="Environment as of" v={f.environmentAsOf ? fmtDate(f.environmentAsOf) : 'not used'} />
+                  <KV
+                    k="Env. sources"
+                    v={f.anchorEnvironment ? Object.values(f.anchorEnvironment).map((e) => e.dataset_id).join(', ') : '—'}
+                  />
                 </div>
+                {f.fallback && (
+                  <div className="note warn" style={{ marginBottom: 10 }}>
+                    Champion {f.fallback.champion} ({f.fallback.champion_schema}) could not be used: {f.fallback.reason} (
+                    {f.fallback.missing_count} missing values). This forecast was produced by trajectory-only model{' '}
+                    {f.fallback.used_model}.
+                  </div>
+                )}
                 <table className="data">
                   <thead>
                     <tr>
@@ -166,6 +180,8 @@ export function IcebergDetailPanel({ icebergId }: { icebergId: string }) {
             )}
           </QueryState>
         )}
+
+        <EnvironmentSection icebergId={icebergId} />
 
         <SectionTitle>Prediction vs actual</SectionTitle>
         <QueryState

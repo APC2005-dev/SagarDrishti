@@ -28,9 +28,11 @@ def usnic_ingestion_job(self, trigger: str = "scheduled") -> dict:  # type: igno
             raise self.retry(exc=RuntimeError(outcome.error))
         return {"status": outcome.status, "error": outcome.error}
     # Evaluate old forecasts against any new/corrected official observations,
+    # align environmental state to the new observations (no-op when disabled),
     # then (idempotently) forecast from the latest official observations.
     chain(
         forecast_evaluation_job.si(outcome.changed_observation_ids),
+        environment_alignment_job.si(outcome.changed_observation_ids or None),
         forecast_generation_job.si("post_ingestion", outcome.run_id),
     ).apply_async()
     return {"status": outcome.status, "run_id": outcome.run_id, "new": len(outcome.new_observation_ids),
@@ -42,6 +44,24 @@ def forecast_evaluation_job(observation_ids: list[int] | None = None) -> dict:
     with session_scope() as session:
         outcome = EvaluationService(session).evaluate(observation_ids)
     return {"evaluated": outcome.evaluated, "by_horizon": outcome.by_horizon}
+
+
+@celery_app.task(soft_time_limit=1800)
+def environment_alignment_job(observation_ids: list[int] | None = None) -> dict:
+    """Environmental state at official observations (only what was available at run time)."""
+    from app.services.environment_service import EnvironmentService
+
+    with session_scope() as session:
+        return EnvironmentService(session, get_settings()).align_observations(observation_ids)
+
+
+@celery_app.task(soft_time_limit=1800)
+def environment_overlay_job() -> dict:
+    """Coarse Southern Ocean wind / current / sea-ice grids for the map overlay."""
+    from app.services.environment_service import EnvironmentService
+
+    with session_scope() as session:
+        return EnvironmentService(session, get_settings()).refresh_overlay()
 
 
 @celery_app.task

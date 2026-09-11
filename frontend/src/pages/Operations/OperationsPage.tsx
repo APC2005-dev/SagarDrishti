@@ -1,4 +1,6 @@
 import { KV, Metric, SectionTitle } from '../../components/common/Metric';
+import { EnvironmentPanel } from '../../components/operations/EnvironmentPanel';
+import { ExperimentPanel } from '../../components/operations/ExperimentPanel';
 import { QueryState } from '../../components/common/QueryState';
 import { Chip, FeedStateChip, RunStatusChip } from '../../components/common/StatusChip';
 import { useForecastRuns, useIngestion, useModels, useRetraining } from '../../hooks/queries';
@@ -13,6 +15,7 @@ function Lineage({ versions }: { versions: ModelVersion[] }) {
         <span className="dim">{depth ? '└─' : ''}</span>
         <span style={{ minWidth: 44 }}>{v.version}</span>
         <RunStatusChip status={v.status} />
+        <span className="dim" title={v.modelType}>{v.featureSchemaVersion}</span>
         <span className="dim">D+7 {fmtKm(v.day7Error, 2)}</span>
         {v.statusReason && <span className="dim" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 420 }}>{v.statusReason}</span>}
       </div>
@@ -167,6 +170,8 @@ export default function OperationsPage() {
                   </h3>
                   <div className="kv-grid" style={{ marginTop: 12 }}>
                     <KV k="Architecture" v={v.architectureVersion} />
+                    <KV k="Feature schema" v={`${v.featureSchemaVersion} (${v.modelType})`} />
+                    <KV k="Env. data cutoff" v={fmtDate(v.environmentalDataCutoff)} />
                     <KV k="Input semantics" v={v.inputSemantics} />
                     <KV k="Adapter" v={v.adapterStrategy ?? '—'} />
                     <KV k="Origin" v={v.artifactOrigin} />
@@ -239,9 +244,12 @@ export default function OperationsPage() {
                 </table>
               )}
             </div>
+            {r.latestRun && <ExperimentPanel run={r.latestRun} />}
           </div>
         )}
       </QueryState>
+
+      <EnvironmentPanel />
     </div>
   );
 }

@@ -88,27 +88,29 @@ def train_challenger(
     if not architecture_version:
         raise ValueError("champion metadata lacks architecture_version")
 
+    features = champion.feature_names  # the champion's own schema columns, selected by name
+    n_features = len(features)
     if config.strategy == STRATEGY_FINE_TUNE:
         train = SequenceDataset.concat([_replay(historical_train, config.historical_replay_samples, config.seed), operational_train])
         validation = SequenceDataset.concat(
             [_replay(historical_validation, max(config.historical_replay_samples // 5, 1), config.seed), operational_validation]
         )
-        model = build_model(architecture_version)
+        model = build_model(architecture_version, n_features=n_features)
         model.set_weights(champion.model.get_weights())
         fs, ts = champion.feature_scaler, champion.target_scaler
     elif config.strategy == STRATEGY_FROM_SCRATCH:
         train = SequenceDataset.concat([historical_train, operational_train])
         validation = SequenceDataset.concat([historical_validation, operational_validation])
         keras.utils.set_random_seed(config.seed)
-        model = build_model(architecture_version)
-        fs, ts = fit_scalers(train.X, train.y)
+        model = build_model(architecture_version, n_features=n_features)
+        fs, ts = fit_scalers(train.select(features), train.y)
     else:
         raise ValueError(f"unknown retraining strategy {config.strategy!r}")
 
     if len(train) == 0:
         raise ValueError("no training samples")
-    Xtr, ytr = transform(fs, ts, train.X, train.y)
-    Xva, yva = transform(fs, ts, validation.X, validation.y)
+    Xtr, ytr = transform(fs, ts, train.select(features), train.y)
+    Xva, yva = transform(fs, ts, validation.select(features), validation.y)
     history = fit(model, Xtr, ytr, Xva, yva, config.training)
 
     bundle = ModelBundle(
@@ -118,6 +120,8 @@ def train_challenger(
         target_scaler=ts,
         metadata={"architecture_version": architecture_version},
         directory=champion.directory,
+        feature_names=features,
+        feature_schema_version=champion.feature_schema_version,
     )
     return TrainedChallenger(
         bundle=bundle,

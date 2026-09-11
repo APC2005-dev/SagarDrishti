@@ -10,7 +10,6 @@ import numpy as np
 from numpy.typing import NDArray
 from sklearn.preprocessing import StandardScaler
 
-from ml.constants import N_FEATURES
 from ml.models.gru_architecture import compile_model
 
 
@@ -31,13 +30,13 @@ class TrainingConfig:
 
 def fit_scalers(X_train_raw: NDArray[np.float32], y_train_raw: NDArray[np.float32]) -> tuple[StandardScaler, StandardScaler]:
     """Fit on training data only. StandardScaler ignores NaN when fitting."""
-    fs = StandardScaler().fit(X_train_raw.reshape(-1, N_FEATURES))
+    fs = StandardScaler().fit(X_train_raw.reshape(-1, X_train_raw.shape[-1]))  # any schema width
     ts = StandardScaler().fit(y_train_raw)
     return fs, ts
 
 
 def transform(fs: StandardScaler, ts: StandardScaler, X: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
-    Xs = fs.transform(X.reshape(-1, N_FEATURES)).reshape(X.shape).astype(np.float32)
+    Xs = fs.transform(X.reshape(-1, X.shape[-1])).reshape(X.shape).astype(np.float32)
     ys = ts.transform(y).astype(np.float32)  # NaN stays NaN -> masked in the loss
     return Xs, ys
 

@@ -13,6 +13,7 @@ NAMING_CONVENTION = {
 
 TRACKING_SCHEMA = "tracking"
 ML_SCHEMA = "ml"
+ENV_SCHEMA = "environmental"
 
 
 class Base(DeclarativeBase):

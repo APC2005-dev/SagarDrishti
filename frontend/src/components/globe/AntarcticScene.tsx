@@ -2,8 +2,10 @@ import { Canvas } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { CRS } from '../../constants';
-import { useBasemapInfo, useHistory } from '../../hooks/queries';
+import { useBasemapInfo, useEnvironmentField, useHistory } from '../../hooks/queries';
 import { ensureBasemap, useBasemap } from './basemap';
+import { SeaIceLayer, VectorFieldLayer } from './EnvironmentLayer';
+import { LayerToggles } from './LayerToggles';
 import { type RiskConeMode, useUi } from '../../stores/uiStore';
 import type { ForecastSet, IcebergSummary } from '../../types/api';
 import { toScene } from '../../utils/projection';
@@ -22,6 +24,7 @@ interface Props {
   riskMode?: RiskConeMode;
   showLegend?: boolean;
   showHistory?: boolean;
+  showLayerToggles?: boolean;
   children?: React.ReactNode;
 }
 
@@ -56,11 +59,21 @@ function Legend({ hasForecasts }: { hasForecasts: boolean }) {
         <span className="legend-swatch sw-history" />
         Past track (selected)
       </div>
+      <div className="legend-row dim">Wind / current / sea ice: analysis fields (toggle, bottom right)</div>
     </div>
   );
 }
 
-export function AntarcticScene({ icebergs, forecasts = [], horizon = 7, riskMode, showLegend = true, showHistory = true, children }: Props) {
+export function AntarcticScene({
+  icebergs,
+  forecasts = [],
+  horizon = 7,
+  riskMode,
+  showLegend = true,
+  showHistory = true,
+  showLayerToggles = true,
+  children,
+}: Props) {
   const selectedId = useUi((s) => s.selectedIcebergId);
   const hoveredId = useUi((s) => s.hoveredIcebergId);
   const select = useUi((s) => s.select);
@@ -71,6 +84,15 @@ export function AntarcticScene({ icebergs, forecasts = [], horizon = 7, riskMode
   const history = useHistory(showHistory ? selectedId : null, true);
   const basemapInfo = useBasemapInfo();
   const basemap = useBasemap();
+  const layers = useUi((s) => s.layers);
+  const windField = useEnvironmentField('wind', layers.wind);
+  const currentField = useEnvironmentField('current', layers.current);
+  const iceField = useEnvironmentField('sea_ice', layers.seaIce);
+  const envLabels = [
+    layers.wind && windField.data && `WIND ${windField.data.datasetId} · VALID ${windField.data.validDate}`,
+    layers.current && currentField.data && `CURRENT (0.5 m) ${currentField.data.datasetId} · VALID ${currentField.data.validDate}`,
+    layers.seaIce && iceField.data && `SEA ICE ${iceField.data.datasetId} · VALID ${iceField.data.validDate}`,
+  ].filter(Boolean) as string[];
   useEffect(() => {
     if (basemapInfo.data) ensureBasemap(basemapInfo.data);
   }, [basemapInfo.data]);
@@ -105,9 +127,16 @@ export function AntarcticScene({ icebergs, forecasts = [], horizon = 7, riskMode
         <Ocean map={basemap.texture} extentUnits={basemap.extentUnits} />
         <Graticule />
         <Land map={basemap.texture} onError={onLandError} />
+        {layers.seaIce && iceField.data && <SeaIceLayer field={iceField.data} />}
+        {layers.current && currentField.data && <VectorFieldLayer field={currentField.data} color="#6fe0d0" scale={0.35} maxLength={0.28} />}
+        {layers.wind && windField.data && <VectorFieldLayer field={windField.data} color="#cfe3ff" scale={0.012} maxLength={0.22} />}
         {showHistory && history.data && <HistoryTrail observations={history.data.items} />}
-        <ForecastLayer forecasts={forecasts} horizon={horizon} selectedId={selectedId} riskMode={riskMode ?? storeRisk} />
-        <IcebergLayer icebergs={plottable} selectedId={selectedId} hoveredId={hoveredId} onHover={hover} onSelect={select} />
+        {layers.forecast && (
+          <ForecastLayer forecasts={forecasts} horizon={horizon} selectedId={selectedId} riskMode={riskMode ?? storeRisk} />
+        )}
+        {layers.icebergs && (
+          <IcebergLayer icebergs={plottable} selectedId={selectedId} hoveredId={hoveredId} onHover={hover} onSelect={select} />
+        )}
         <CameraRig focus={focus} />
       </Canvas>
 
@@ -119,7 +148,15 @@ export function AntarcticScene({ icebergs, forecasts = [], horizon = 7, riskMode
           {plottable.length} OFFICIAL POSITIONS{forecasts.length ? ` · ${forecasts.length} FORECAST SETS · D+1…D+${horizon}` : ''}
         </span>
         {landError && <span style={{ color: 'var(--warn)' }}>COASTLINE UNAVAILABLE: {landError}</span>}
+        {envLabels.map((l) => (
+          <span key={l}>{l} · ANALYSIS, COARSENED</span>
+        ))}
       </div>
+      {showLayerToggles && (
+        <div className="map-overlay" style={{ bottom: 14, right: 14 }}>
+          <LayerToggles />
+        </div>
+      )}
       {showLegend && <Legend hasForecasts={forecasts.length > 0} />}
       {children}
     </div>

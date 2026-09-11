@@ -2,6 +2,8 @@
 
 Replicates notebook §6 (inverse-scale, add to anchor, project back to
 WGS84, haversine) for all 7 horizons, skipping horizons whose target is NaN.
+Each model reads only its own feature columns (by name) from the dataset, so
+models with different feature schemas are scored on *identical samples*.
 Also provides the constant-velocity benchmark, kept only as a research
 reference — it is never used to produce production forecasts.
 """
@@ -16,6 +18,7 @@ from numpy.typing import NDArray
 from ml.constants import FORECAST_DAYS
 from ml.evaluation.metrics import ErrorSummary, summarize
 from ml.features.coordinate_transform import haversine_km, polar_m_to_latlon
+from ml.features.schemas import select_columns
 from ml.inference.predictor import predict_displacements_km
 from ml.models.model_loader import ModelBundle
 from ml.training.dataset_builder import SequenceDataset
@@ -49,14 +52,19 @@ def errors_from_displacements(
     return err
 
 
-def _result(protocol: str, err: NDArray[np.float64]) -> EvaluationResult:
+def result_from_errors(protocol: str, err: NDArray[np.float64]) -> EvaluationResult:
     by_h = {h: summarize(err[:, h - 1]) for h in range(1, FORECAST_DAYS + 1)}
     return EvaluationResult(protocol=protocol, by_horizon=by_h, overall=summarize(err.reshape(-1)))
 
 
+def prediction_errors(bundle: ModelBundle, dataset: SequenceDataset) -> NDArray[np.float64]:
+    """(n, 7) errors of ``bundle`` on ``dataset`` using the bundle's own feature columns."""
+    X = select_columns(dataset.X, dataset.feature_names, bundle.feature_names)
+    return errors_from_displacements(dataset, predict_displacements_km(bundle, np.ascontiguousarray(X)))
+
+
 def evaluate_bundle(bundle: ModelBundle, dataset: SequenceDataset, protocol: str) -> EvaluationResult:
-    predicted = predict_displacements_km(bundle, dataset.X)
-    return _result(protocol, errors_from_displacements(dataset, predicted))
+    return result_from_errors(protocol, prediction_errors(bundle, dataset))
 
 
 def evaluate_constant_velocity(dataset: SequenceDataset, protocol: str) -> EvaluationResult:
@@ -65,4 +73,4 @@ def evaluate_constant_velocity(dataset: SequenceDataset, protocol: str) -> Evalu
     vx = dataset.X[:, -1, 2].astype(np.float64)[:, None]
     vy = dataset.X[:, -1, 3].astype(np.float64)[:, None]
     predicted = np.stack([vx * horizons, vy * horizons], axis=-1)
-    return _result(protocol, errors_from_displacements(dataset, predicted))
+    return result_from_errors(protocol, errors_from_displacements(dataset, predicted))

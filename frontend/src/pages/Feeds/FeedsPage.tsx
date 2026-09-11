@@ -7,11 +7,7 @@ import { useFeeds } from '../../hooks/queries';
 import { fmtDate, fmtDateTime, fmtNum, relTime, shortHash } from '../../utils/format';
 
 /** Sources the architecture anticipates. Listed as not configured — no data is shown for them. */
-const PLANNED = [
-  { name: 'Antarctic sea-ice concentration', note: 'Gridded daily concentration for the sea-ice screen and route constraints.' },
-  { name: 'Ocean surface currents', note: 'Candidate exogenous feature for a future architecture version (explicitly versioned).' },
-  { name: 'Vessel positions (AIS)', note: 'Route planning input.' },
-];
+const PLANNED = [{ name: 'Vessel positions (AIS)', note: 'Route planning input.' }];
 
 export default function FeedsPage() {
   const feeds = useFeeds();
@@ -33,7 +29,10 @@ export default function FeedsPage() {
                     <h3>{f.name}</h3>
                     <span className="dim">{f.provider}</span>
                   </div>
-                  <FeedStateChip state={f.state} />
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                    {f.category === 'environmental' && <Chip tone="neutral">ENVIRONMENTAL</Chip>}
+                    {f.configured ? <FeedStateChip state={f.state} /> : <Chip tone="neutral">NOT CONFIGURED</Chip>}
+                  </div>
                 </div>
                 <p className="muted" style={{ fontSize: 12 }}>{f.description}</p>
                 {f.stateReasons.length > 0 && <div className="note warn" style={{ marginBottom: 12 }}>{f.stateReasons.join(' · ')}</div>}

@@ -36,6 +36,7 @@ celery_app.conf.update(
         "usnic-ingestion": {"task": "app.workers.tasks.usnic_ingestion_job", "schedule": timedelta(hours=settings.ingestion_interval_hours)},
         "retraining-check": {"task": "app.workers.tasks.retraining_job", "schedule": timedelta(hours=settings.retrain_check_interval_hours)},
         "model-validation": {"task": "app.workers.tasks.model_validation_job", "schedule": timedelta(hours=24)},
+        "environment-overlay": {"task": "app.workers.tasks.environment_overlay_job", "schedule": timedelta(hours=24)},
     },
 )
 

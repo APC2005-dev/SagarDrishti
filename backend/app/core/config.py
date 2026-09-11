@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -53,6 +53,35 @@ class Settings(BaseSettings):
     basemap_cache_dir: Path = REPO_ROOT / "data" / "processed" / "basemap"
     basemap_timeout_seconds: float = 20.0
 
+    # --- environmental features (environmental model versions only; base/v1 never use them)
+    env_enabled: bool = True
+    env_wind_provider: str = "copernicus_marine"
+    env_current_provider: str = "copernicus_marine"
+    env_sea_ice_provider: str = "copernicus_marine"
+    env_historical_wind_provider: str = "era5"
+    env_historical_current_provider: str = "copernicus_marine"
+    env_historical_sea_ice_provider: str = "copernicus_marine"
+    env_cache_dir: Path = REPO_ROOT / "data" / "processed" / "environment"
+    env_max_staleness_days: int = 3
+    env_candidate_schemas: Annotated[list[str], NoDecode] = [
+        "trajectory_v1", "traj_wind_v1", "traj_current_v1", "traj_wind_current_v1", "traj_wind_current_ice_v1",
+    ]
+    env_training_max_historical_samples: int = 30_000
+    env_training_max_test_samples: int = 8_000
+    env_archive_forecast_fields: bool = True
+    env_overlay_resolution_deg: float = 1.0
+    # Trajectory-only model used when an environmental champion lacks inputs for an iceberg.
+    # Empty = nearest trajectory-only ancestor of the champion.
+    env_fallback_model_version: str | None = None
+    copernicus_marine_username: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("COPERNICUS_MARINE_USERNAME", "COPERNICUSMARINE_SERVICE_USERNAME")
+    )
+    copernicus_marine_password: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("COPERNICUS_MARINE_PASSWORD", "COPERNICUSMARINE_SERVICE_PASSWORD")
+    )
+    cds_api_key: SecretStr | None = Field(None, validation_alias=AliasChoices("CDSAPI_KEY", "CDS_API_KEY"))
+    cds_api_url: str = Field("https://cds.climate.copernicus.eu/api", validation_alias=AliasChoices("CDSAPI_URL", "CDS_API_URL"))
+
     # --- paths -----------------------------------------------------------------
     raw_data_dir: Path = REPO_ROOT / "data" / "raw"
     models_dir: Path = REPO_ROOT / "models"
@@ -82,7 +111,7 @@ class Settings(BaseSettings):
     promotion_max_short_horizon_regression: float = 0.05
     promotion_min_evaluation_samples: int = 30
 
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins", "env_candidate_schemas", mode="before")
     @classmethod
     def _split_origins(cls, v: object) -> object:
         if isinstance(v, str) and not v.strip().startswith("["):

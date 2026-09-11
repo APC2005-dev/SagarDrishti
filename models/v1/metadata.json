@@ -1,0 +1,125 @@
+{
+  "architecture": "GRU",
+  "architecture_version": "gru_entry14_to_day7_v1",
+  "input_sequence_length": 14,
+  "forecast_horizon_days": 7,
+  "feature_names": [
+    "relative_x_km",
+    "relative_y_km",
+    "vx_km_per_day",
+    "vy_km_per_day",
+    "season_sin",
+    "season_cos"
+  ],
+  "version": "v1",
+  "parent_version": "base",
+  "input_semantics": "chronological_observation_entries",
+  "adapter_strategy": "bootstrap_v1",
+  "artifact_origin": "copy_of_base",
+  "training_data_cutoff": "2026-04-30",
+  "training": {
+    "note": "no additional training; weights and scalers are byte-identical to base",
+    "parent_artifact_sha256": {
+      "global_gru_trajectory_model.keras": "555b93491afbf75d4adf46d8f0c0c71d494ca92035d1520db234f594eb2bc015",
+      "global_gru_trajectory_scalers.joblib": "2d5963cf9bc23a4185bfd15df5d0cefb5090dea95899917e7b72493e57822e2d"
+    }
+  },
+  "metrics": {
+    "source": "notebook section 6 (test phase, great-circle error in km)",
+    "protocol": "historical_test_2022-03-10_2026-04-23",
+    "by_horizon": {
+      "1": {
+        "n": 59732,
+        "mae_km": 1.2481,
+        "rmse_km": 10.6071,
+        "median_km": 0.2118,
+        "p90_km": 2.0461
+      },
+      "2": {
+        "n": 59732,
+        "mae_km": 2.3111,
+        "rmse_km": 12.2581,
+        "median_km": 0.4347,
+        "p90_km": 4.756
+      },
+      "3": {
+        "n": 59732,
+        "mae_km": 3.6113,
+        "rmse_km": 14.4911,
+        "median_km": 0.7615,
+        "p90_km": 7.9127
+      },
+      "4": {
+        "n": 59732,
+        "mae_km": 5.1716,
+        "rmse_km": 17.0639,
+        "median_km": 1.1951,
+        "p90_km": 12.0531
+      },
+      "5": {
+        "n": 59732,
+        "mae_km": 6.9448,
+        "rmse_km": 20.0147,
+        "median_km": 1.7046,
+        "p90_km": 16.8918
+      },
+      "6": {
+        "n": 59732,
+        "mae_km": 8.8458,
+        "rmse_km": 23.1036,
+        "median_km": 2.2619,
+        "p90_km": 22.4201
+      },
+      "7": {
+        "n": 59732,
+        "mae_km": 10.7805,
+        "rmse_km": 26.1374,
+        "median_km": 2.8209,
+        "p90_km": 27.9853
+      }
+    },
+    "constant_velocity_benchmark": {
+      "1": {
+        "mae_km": 1.6204,
+        "median_km": 0.0908,
+        "p90_km": 2.5747
+      },
+      "2": {
+        "mae_km": 3.4585,
+        "median_km": 0.3112,
+        "p90_km": 7.1429
+      },
+      "3": {
+        "mae_km": 5.7153,
+        "median_km": 0.6782,
+        "p90_km": 12.6735
+      },
+      "4": {
+        "mae_km": 8.2847,
+        "median_km": 1.2105,
+        "p90_km": 19.4125
+      },
+      "5": {
+        "mae_km": 11.0772,
+        "median_km": 1.85,
+        "p90_km": 26.5759
+      },
+      "6": {
+        "mae_km": 14.0336,
+        "median_km": 2.59,
+        "p90_km": 34.0027
+      },
+      "7": {
+        "mae_km": 17.0377,
+        "median_km": 3.4091,
+        "p90_km": 41.9801
+      }
+    }
+  },
+  "description": "First production version. Entry 14 (anchor) = latest official USNIC observation; earlier entries = most recent historical-training-dataset positions (ProductionSequenceAdapter bootstrap_v1).",
+  "created_at": "2026-09-11T08:01:34.948668+00:00",
+  "artifact_sha256": {
+    "model.keras": "555b93491afbf75d4adf46d8f0c0c71d494ca92035d1520db234f594eb2bc015",
+    "scalers.joblib": "2d5963cf9bc23a4185bfd15df5d0cefb5090dea95899917e7b72493e57822e2d"
+  }
+}

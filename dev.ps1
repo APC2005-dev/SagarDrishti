@@ -40,6 +40,10 @@ Usage: dev <target> [<target> ...]
   retrain          policy-gated retraining   (-Force to ignore thresholds)
   benchmark        historical benchmark      (-Version v1)
   status           deployed model, versions, retraining eligibility
+  env-status       environmental sources: configured?, trainable feature schemas
+  env-align        align wind/current/sea ice to the latest official fixes
+  env-overlay      refresh the map's environmental overlay grids
+  env-prefetch     pre-warm the environmental cache for retraining
   test | lint      run all tests | lint + typecheck
   dev | up | down  full stack in docker (foreground | background | stop)
 "@
@@ -73,6 +77,10 @@ foreach ($Target in $Targets) {
         { $_ -in "train", "retrain" } { if ($Force) { Invoke-AppCli @("retrain", "--force") } else { Invoke-AppCli @("retrain") } }
         "benchmark"       { if (-not $Version) { throw "benchmark needs -Version, e.g. dev benchmark -Version v1" }; Invoke-AppCli @("benchmark", "--version", $Version) }
         "status"          { Invoke-AppCli @("status") }
+        "env-status"      { Invoke-AppCli @("env-status") }
+        "env-align"       { Invoke-AppCli @("env-align") }
+        "env-overlay"     { Invoke-AppCli @("env-overlay") }
+        "env-prefetch"    { Invoke-AppCli @("env-prefetch") }
         "test"            { & $Py -m pytest "$Root\ml\tests" "$Root\backend\tests" -q; Push-Location "$Root\frontend"; npm test; Pop-Location }
         "lint"            { & $Py -m ruff check "$Root\ml" "$Root\backend\app" "$Root\backend\tests"; Push-Location "$Root\frontend"; npm run typecheck; Pop-Location }
         default           { Write-Host "Unknown target '$Target'." -ForegroundColor Red; Help; exit 1 }

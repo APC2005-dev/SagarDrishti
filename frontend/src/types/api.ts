@@ -81,6 +81,21 @@ export interface ForecastPoint {
   provenance: 'predicted';
 }
 
+/** Environmental value used for one entry of one group (JSON blob from the backend, snake_case). */
+export interface EnvEntryValue {
+  values: Record<string, number | null>;
+  valid_date: string | null;
+  provider: string;
+  dataset_id: string;
+  staleness_days: number | null;
+  missing: boolean;
+  as_of?: string;
+  interpolation?: string;
+  valid_neighbours?: number;
+  reason?: string | null;
+  quality_flags?: string[];
+}
+
 export interface InputEntry {
   observationId: number | null;
   date: string;
@@ -88,6 +103,7 @@ export interface InputEntry {
   longitude: number;
   provenance: Provenance;
   elapsedDays: number;
+  environment?: Record<string, EnvEntryValue> | null;
 }
 
 export interface SequenceDiagnostics {
@@ -120,6 +136,10 @@ export interface ForecastSet {
   };
   points: ForecastPoint[];
   inputEntries: InputEntry[] | null;
+  featureSchemaVersion: string;
+  environmentAsOf: string | null;
+  anchorEnvironment: Record<string, EnvEntryValue> | null;
+  fallback: { champion: string; champion_schema: string; used_model: string; reason: string; missing: string[]; missing_count: number } | null;
 }
 
 export interface ForecastRow {
@@ -175,9 +195,14 @@ export interface ModelVersion {
   statusReason: string | null;
   deployedAt: string | null;
   createdAt: string;
+  modelType: 'base' | 'trajectory' | 'environmental';
+  featureSchemaVersion: string;
+  environmentalDataSources: Record<string, { historical: Record<string, unknown> | null; operational: Record<string, unknown> | null }> | null;
+  environmentalDataCutoff: string | null;
 }
 
 export interface ModelVersionDetail extends ModelVersion {
+  featureSchema: { version: string; description: string; features: string[]; env_variables: string[]; groups: string[] } | null;
   metrics: ModelMetric[];
   statusHistory: { fromStatus: string | null; toStatus: string; reason: string; actor: string; createdAt: string }[];
   children: string[];
@@ -289,6 +314,33 @@ export interface RetrainingRun {
   startedAt: string;
   completedAt: string | null;
   failureReason: string | null;
+  experiment: ExperimentRecord | null;
+}
+
+export interface ExperimentCandidate {
+  version: string;
+  schema: string;
+  architecture_version: string;
+  train_samples: number;
+  validation_samples: number;
+  validation_primary_mae_km: number | null;
+  status: string;
+}
+
+export interface ExperimentRecord {
+  schemas?: string[];
+  candidates?: ExperimentCandidate[];
+  failures?: Record<string, string>;
+  unavailable?: Record<string, string>;
+  environmental_schemas_unavailable?: Record<string, string>;
+  selection?: { criterion: string; selected: string; common_validation_samples: number };
+}
+
+export interface AblationEffect {
+  without: string;
+  with: string;
+  verdict: Record<string, 'improved' | 'worse' | 'no significant difference' | 'no data'>;
+  by_horizon: Record<string, { n: number; mae_diff_km: number | null; ci95_low_km: number | null; ci95_high_km: number | null; candidate_better_share: number | null }>;
 }
 
 export interface RetrainingStatus {
@@ -317,6 +369,8 @@ export interface Feed {
   recordCount: number | null;
   discoveryMethod: string | null;
   errorMessage: string | null;
+  category: 'iceberg' | 'environmental';
+  configured: boolean;
 }
 
 export interface Overview {
@@ -340,7 +394,12 @@ export interface Overview {
     day1Error: number | null;
     day3Error: number | null;
     day7Error: number | null;
+    modelType: string;
+    featureSchemaVersion: string;
+    featureSchemaDescription: string | null;
+    environmentalSources: string[];
   } | null;
+  environment: { enabled: boolean; configuredGroups: string[]; lastSyncAt: string | null } | null;
   modelVersions: number;
   icebergsWithActiveForecasts: number;
   lastForecastRun: ForecastRun | null;
@@ -360,6 +419,95 @@ export interface BasemapInfo {
   defaultLayer: string;
   layers: { id: string; title: string; maxZoom: number }[];
   attribution: string;
+}
+
+export type EnvGroup = 'wind' | 'current' | 'sea_ice';
+
+export interface EnvSource {
+  group: EnvGroup;
+  role: 'operational' | 'historical';
+  provider: string | null;
+  configured: boolean;
+  reason: string;
+  authority: string | null;
+  productId: string | null;
+  datasetId: string | null;
+  variables: Record<string, string> | null;
+  units: Record<string, string> | null;
+  spatialResolutionDeg: number | null;
+  temporalResolution: string | null;
+  aggregation: string | null;
+  latencyDays: number | null;
+  coverageStart: string | null;
+  coverageEnd: string | null;
+  depth: string | null;
+  supportsForecast: boolean;
+  forecastLeadDays: number;
+  notes: string | null;
+}
+
+export interface EnvStatus {
+  enabled: boolean;
+  sources: EnvSource[];
+  lastRuns: Record<string, { last_status: string | null; last_run_at: string | null; last_error: string | null; last_success_at: string | null }>;
+  cacheEntries: number;
+  cacheBytes: number;
+  latestCacheFetch: string | null;
+  schemas: { version: string; description: string; features: string[]; groups: string[]; trainable: boolean; reason: string }[];
+  policy: Record<string, string | number>;
+}
+
+export interface EnvRun {
+  id: number;
+  kind: string;
+  group: string | null;
+  provider: string | null;
+  datasetId: string | null;
+  role: string | null;
+  status: string;
+  records: number;
+  bytes: number | null;
+  durationMs: number | null;
+  errorMessage: string | null;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface EnvGroupValue {
+  group: EnvGroup;
+  provider: string;
+  datasetId: string;
+  values: Record<string, number | null>;
+  units: Record<string, string>;
+  validDate: string | null;
+  asOf: string;
+  stalenessDays: number | null;
+  interpolation: string;
+  validNeighbours: number;
+  missing: boolean;
+  reason: string | null;
+  qualityFlags: string[];
+  vector: { speedMS: number; directionDeg: number; directionConvention: 'from' | 'towards' } | null;
+}
+
+export interface IcebergEnvironment {
+  icebergId: string;
+  observationId: number | null;
+  observationDate: string | null;
+  aligned: boolean;
+  reason: string | null;
+  groups: EnvGroupValue[];
+}
+
+export interface EnvField {
+  group: EnvGroup;
+  variables: string[];
+  validDate: string;
+  provider: string | null;
+  datasetId: string | null;
+  resolutionDeg: number;
+  /** [lat, lon, value1, value2?] */
+  points: number[][];
 }
 
 export interface HealthCheck {

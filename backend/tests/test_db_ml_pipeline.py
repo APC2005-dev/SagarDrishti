@@ -17,7 +17,7 @@ from app.services.ingestion_service import IngestionService
 from app.services.model_registry import ModelRegistry, RegistryError
 from app.services.retraining_service import RetrainingService
 from ml.features.coordinate_transform import haversine_km
-from tests.helpers import add_historical_track, csv_rows, document, write_tiny_base
+from tests.helpers import add_historical_track, base_p90, csv_rows, document, write_tiny_base
 
 pytestmark = [pytest.mark.db, pytest.mark.tf]
 
@@ -48,7 +48,7 @@ def test_bootstrap_registers_base_and_deploys_v1(pipeline, settings) -> None:  #
     assert v1.adapter_strategy == "bootstrap_v1" and v1.input_semantics == "chronological_observation_entries"
     assert v1.artifact_sha256["model.keras"] == base.artifact_sha256["global_gru_trajectory_model.keras"]
     assert not os.stat(Path(settings.models_dir) / "v1" / "model.keras").st_mode & stat.S_IWUSR
-    assert reg.risk_radii("v1") == {1: 2.088, 3: 7.947, 7: 28.115}
+    assert reg.risk_radii("v1") == base_p90()
     events = [e.to_status for e in pipeline.execute(select(ModelStatusEvent).where(ModelStatusEvent.model_version == "v1")).scalars()]
     assert events == ["candidate", "validated", "deployed"]
     assert reg.ensure_v1_bootstrap().version == "v1"  # idempotent
@@ -67,7 +67,7 @@ def test_forecast_then_evaluate_full_lineage(pipeline, settings) -> None:  # typ
     assert fs.diagnostics["daily_cadence"] is False
     points = db.execute(select(Forecast).order_by(Forecast.forecast_horizon_days)).scalars().all()
     assert [p.forecast_horizon_days for p in points] == list(range(1, 8))
-    assert points[6].forecast_date == date(2026, 9, 17) and points[0].risk_radius_km_p90 == 2.088
+    assert points[6].forecast_date == date(2026, 9, 17) and points[0].risk_radius_km_p90 == base_p90()[1]
     assert all(p.provenance == "predicted" for p in points)
 
     # idempotent: same anchor + same model -> nothing new

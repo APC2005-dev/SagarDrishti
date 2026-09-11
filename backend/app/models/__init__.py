@@ -1,3 +1,4 @@
+from app.models.environment import EnvCacheEntry, EnvIngestionRun, ForecastEnvironmentSnapshot, ObservationEnvironment
 from app.models.ml import (
     Forecast,
     ForecastEvaluation,
@@ -11,7 +12,10 @@ from app.models.ml import (
 from app.models.tracking import Iceberg, IngestionRowError, IngestionRun, Observation, ObservationRevision
 
 __all__ = [
+    "EnvCacheEntry",
+    "EnvIngestionRun",
     "Forecast",
+    "ForecastEnvironmentSnapshot",
     "ForecastEvaluation",
     "ForecastRun",
     "ForecastSet",
@@ -22,6 +26,7 @@ __all__ = [
     "ModelStatusEvent",
     "ModelVersion",
     "Observation",
+    "ObservationEnvironment",
     "ObservationRevision",
     "RetrainingRun",
 ]

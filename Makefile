@@ -61,6 +61,14 @@ train retrain:    ## policy-gated retraining (FORCE=1 to ignore eligibility thre
 	$(CLI) retrain $(if $(FORCE),--force,)
 benchmark:        ## all-horizon benchmark on the fixed historical test split
 	$(CLI) benchmark --version $(VERSION)
+env-status:       ## environmental sources, credentials configured (yes/no), trainable schemas
+	$(CLI) env-status
+env-align:
+	$(CLI) env-align
+env-overlay:
+	$(CLI) env-overlay
+env-prefetch:     ## pre-warm the environmental cache for a retraining experiment
+	$(CLI) env-prefetch
 reproduce-base:   ## ONLY if the original artifact is lost: retrain base from the notebook recipe
 	$(PY) -m ml.training.reproduce_base --zip data/bootstrap/consolidated_database_v8.0.zip --out models/base-reproduced
 

@@ -16,7 +16,7 @@ from app.main import app
 from app.services.forecast_service import ForecastService
 from app.services.ingestion_service import IngestionService
 from app.services.model_registry import ModelRegistry
-from tests.helpers import add_historical_track, document, write_tiny_base
+from tests.helpers import add_historical_track, base_p90, document, write_tiny_base
 
 pytestmark = [pytest.mark.db, pytest.mark.tf]
 
@@ -112,7 +112,10 @@ async def test_models(client, seeded) -> None:  # type: ignore[no-untyped-def]
     assert cur["version"] == "v1" and cur["architectureVersion"] == "gru_entry14_to_day7_v1"
     detail = (await client.get("/api/v1/models/v1")).json()
     assert [e["toStatus"] for e in detail["statusHistory"]] == ["candidate", "validated", "deployed"]
-    assert {m["horizonDays"] for m in detail["metrics"]} == {1, 3, 7}
+    assert {m["horizonDays"] for m in detail["metrics"]} == set(base_p90())
+    assert detail["modelType"] == "trajectory" and detail["featureSchemaVersion"] == "trajectory_v1"
+    assert detail["featureSchema"]["features"][:2] == ["relative_x_km", "relative_y_km"]
+    assert versions[0]["modelType"] == "base"
     lineage = (await client.get("/api/v1/models/lineage")).json()
     assert {n["version"]: n["parentVersion"] for n in lineage} == {"base": None, "v1": "base"}
     ev = (await client.get("/api/v1/models/v1/evaluations")).json()
