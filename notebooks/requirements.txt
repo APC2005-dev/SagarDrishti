@@ -1,0 +1,5 @@
+# Local run of 01_gru_iceberg_trajectory_model.ipynb (Colab already provides these).
+-r ../ml/requirements.txt
+matplotlib>=3.8
+tqdm>=4.66
+jupyter>=1.0
