@@ -1,0 +1,15 @@
+-r ../ml/requirements.txt
+
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.9
+pydantic-settings>=2.6
+sqlalchemy[asyncio]>=2.0.36
+geoalchemy2>=0.16
+asyncpg>=0.30
+psycopg[binary]>=3.2
+alembic>=1.14
+celery[redis]>=5.4
+redis>=5.2
+httpx>=0.28
+structlog>=24.4

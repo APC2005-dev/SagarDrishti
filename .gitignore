@@ -1,0 +1,32 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# node
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+
+# data: raw fetches and processed intermediates are regenerated; the bootstrap
+# dataset is large and has its own checksum in data/bootstrap/MANIFEST.json
+data/raw/*
+data/processed/*
+data/bootstrap/*.zip
+!data/**/.gitkeep
+
+# model binaries (immutable artifacts live on the model store, metadata is tracked)
+models/**/*.keras
+models/**/*.joblib
+models/.v*-*/
+
+.DS_Store

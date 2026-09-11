@@ -1,0 +1,30 @@
+/* SAGAR DRISHTI design tokens — dark operational console. */
+:root {
+  --bg: #0f111a;
+  --bg-2: #131624;
+  --surface: #181b2a;
+  --surface-2: #1e2233;
+  --surface-glass: rgba(22, 25, 39, 0.82);
+  --line: rgba(233, 236, 245, 0.08);
+  --line-strong: rgba(233, 236, 245, 0.16);
+
+  --text: #e6e8ef;
+  --text-2: #a9aec2;
+  --text-3: #6f7590;
+
+  --accent: #9184d9;
+  --official: #9fe3ff;
+  --forecast: #b3a6ff;
+  --ok: #5fc79a;
+  --warn: #e0a84e;
+  --bad: #e5716a;
+  --info: #7fb2ff;
+
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --r-sm: 3px;
+  --r-md: 6px;
+  --topbar-h: 56px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}

@@ -1,0 +1,73 @@
+{
+  "version": "base",
+  "parent_version": null,
+  "architecture": "GRU",
+  "architecture_version": "gru_entry14_to_day7_v1",
+  "architecture_layers": [
+    "Input(14, 6)",
+    "GRU(96, dropout=0.10, name=trajectory_gru)",
+    "LayerNormalization()",
+    "Dense(128, activation=relu)",
+    "Dropout(0.15)",
+    "Dense(14, name=future_displacements)"
+  ],
+  "parameter_count": 44366,
+  "input_sequence_length": 14,
+  "input_semantics": "consecutive_daily_positions",
+  "forecast_horizon_days": 7,
+  "output_semantics": "flattened [d1_dx_km, d1_dy_km, ..., d7_dx_km, d7_dy_km] displacement from the last input position, EPSG:3031",
+  "feature_names": ["relative_x_km", "relative_y_km", "vx_km_per_day", "vy_km_per_day", "season_sin", "season_cos"],
+  "coordinate_reference_system": "EPSG:3031",
+  "artifact_files": {
+    "model": "global_gru_trajectory_model.keras",
+    "scalers": "global_gru_trajectory_scalers.joblib"
+  },
+  "artifact_origin": "original_research_artifact",
+  "research_source": {
+    "notebook": "notebooks/01_gru_iceberg_trajectory_model.ipynb",
+    "sections": {"cleaning": 2, "sequences": 3, "split_and_scalers": 4, "training": 5, "evaluation": 6, "export": 8},
+    "original_run": "trained in the original exploratory notebook 01_iceberg_trajectory_xgboost.ipynb (cells 53-61), whose GRU section the cleaned notebook reproduces"
+  },
+  "training": {
+    "dataset": "byu_mers_consolidated_antarctic_iceberg_database_v8.0",
+    "dataset_file": "data/bootstrap/consolidated_database_v8.0.zip",
+    "clean_position_records": 515500,
+    "icebergs": 640,
+    "record_date_range": ["1976-02-01", "2026-04-30"],
+    "sequence_examples": 477988,
+    "split": {
+      "method": "chronological, grouped by anchor date, 75 / 12.5 / 12.5",
+      "train": {"examples": 358491, "anchor_dates": ["1979-09-15", "2018-08-23"]},
+      "validation": {"examples": 59765, "anchor_dates": ["2018-08-24", "2022-03-09"]},
+      "test": {"examples": 59732, "anchor_dates": ["2022-03-10", "2026-04-23"]}
+    },
+    "optimizer": "Adam(learning_rate=5e-4)",
+    "loss": "Huber",
+    "batch_size": 512,
+    "max_epochs": 65,
+    "epochs_run": 52,
+    "best_epoch": 46,
+    "seed": 42
+  },
+  "training_data_cutoff": "2026-04-30",
+  "metrics": {
+    "source": "original training run, test-split evaluation output (great-circle error in km)",
+    "protocol": "historical_test_2022-03-10_2026-04-23",
+    "by_horizon": {
+      "1": {"n": 59732, "mae_km": 1.255, "median_km": 0.211, "p90_km": 2.088, "rmse_km": null},
+      "3": {"n": 59732, "mae_km": 3.637, "median_km": 0.774, "p90_km": 7.947, "rmse_km": null},
+      "7": {"n": 59732, "mae_km": 10.834, "median_km": 2.842, "p90_km": 28.115, "rmse_km": null}
+    },
+    "constant_velocity_benchmark": {
+      "1": {"mae_km": 1.620, "median_km": 0.091, "p90_km": 2.575},
+      "3": {"mae_km": 5.715, "median_km": 0.678, "p90_km": 12.674},
+      "7": {"mae_km": 17.038, "median_km": 3.409, "p90_km": 41.980}
+    },
+    "note": "Horizons 2, 4, 5, 6 and RMSE were not reported by the notebook. Run `make benchmark VERSION=base` to compute all seven horizons on the same split; values are recorded in ml.model_metrics, this file is not rewritten."
+  },
+  "known_limitations": [
+    "Trained on consecutive DAILY positions. Operational USNIC entries are weekly; production use goes through ProductionSequenceAdapter, which keeps velocities in km/day but the gap regime is outside the training distribution.",
+    "Scatterometer positions dominate the daily runs; NIC positions in the BYU record are often interpolated between reports (see BYU README)."
+  ],
+  "created_at": "2026-09-10"
+}

@@ -1,0 +1,9 @@
+# Pure ML stack (no database / web dependencies).
+# The base artifact was saved by Keras 3 (TensorFlow >= 2.16) in Colab.
+numpy>=1.26,<3
+pandas>=2.2,<3
+pyproj>=3.6
+scikit-learn>=1.4
+joblib>=1.4
+tensorflow>=2.16,<2.21 ; platform_system != "Linux"
+tensorflow-cpu>=2.16,<2.21 ; platform_system == "Linux"
