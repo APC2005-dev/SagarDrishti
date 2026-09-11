@@ -31,5 +31,5 @@ models/.v*-*/
 
 .DS_Store
 
-#claude
+# claude
 .claude/
