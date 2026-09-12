@@ -169,7 +169,8 @@
 }
 .chip-official {
   color: var(--official);
-  background: rgba(159, 227, 255, 0.07);
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.35);
 }
 .chip-forecast {
   color: var(--forecast);
@@ -478,11 +479,13 @@ table.data tbody tr.selected {
 }
 .sw-official {
   background: var(--official);
-  transform: rotate(45deg) scale(0.7);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.6);
+  transform: rotate(45deg) scale(0.75);
 }
 .sw-stale {
   background: var(--warn);
-  transform: rotate(45deg) scale(0.7);
+  box-shadow: 0 0 6px rgba(255, 152, 0, 0.6);
+  transform: rotate(45deg) scale(0.75);
 }
 .sw-forecast {
   border: 1.5px solid var(--forecast);

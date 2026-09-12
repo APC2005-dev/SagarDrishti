@@ -8,8 +8,8 @@ export const CRS = { data: 'EPSG:4326', render: 'EPSG:3031' } as const;
 
 /** Scene colours (kept in sync with styles/tokens.css). */
 export const COLORS = {
-  official: '#9fe3ff',
-  officialStale: '#e0a84e',
+  official: '#00e5ff',
+  officialStale: '#ff9800',
   forecast: '#b3a6ff',
   forecastLine: '#8f7ff0',
   risk: '#b3a6ff',

@@ -9,7 +9,7 @@ import type { IcebergSummary } from '../../types/api';
 import { formatLat, formatLon } from '../../utils/projection';
 import { toScene } from '../../utils/projection';
 
-export const MARKER_Y = 0.07;
+export const MARKER_Y = 0.085;
 
 export interface PlottableIceberg extends IcebergSummary {
   latitude: number;
@@ -45,10 +45,10 @@ export function IcebergLayer({ icebergs, selectedId, hoveredId, onHover, onSelec
     if (!m) return;
     icebergs.forEach((b, i) => {
       const [x, z] = positions[i]!;
-      const s = i === selectedIdx ? 1.7 : i === hoveredIdx ? 1.35 : 1;
+      const s = i === selectedIdx ? 2.0 : i === hoveredIdx ? 1.5 : 1.2;
       tmp.position.set(x, MARKER_Y, z);
       tmp.rotation.set(0, Math.PI / 4, 0);
-      tmp.scale.set(s, s * 0.6, s);
+      tmp.scale.set(s, s * 0.8, s);
       tmp.updateMatrix();
       m.setMatrixAt(i, tmp.matrix);
       m.setColorAt(i, i === selectedIdx ? cSelected : b.isStale ? cStale : cOfficial);
@@ -86,7 +86,7 @@ export function IcebergLayer({ icebergs, selectedId, hoveredId, onHover, onSelec
           onSelect(idAt(e));
         }}
       >
-        <octahedronGeometry args={[0.042, 0]} />
+        <octahedronGeometry args={[0.062, 0]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
 
