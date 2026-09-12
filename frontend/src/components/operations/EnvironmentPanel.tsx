@@ -55,34 +55,7 @@ export function EnvironmentPanel() {
                 </table>
               </div>
             </div>
-            <div className="cards" style={{ marginTop: 12 }}>
-              <div className="panel card">
-                <h3>Leakage & missing-data policy</h3>
-                <div className="note" style={{ marginTop: 8 }}>
-                  {Object.entries(s.policy).map(([k, v]) => (
-                    <div key={k}>
-                      <span className="mono">{k.replace(/_/g, ' ')}:</span> {String(v)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="panel card">
-                <h3>Feature schemas</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
-                  {s.schemas.map((sc) => (
-                    <div key={sc.version} className="mono" style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
-                      <span title={sc.features.join(', ')}>{sc.version}</span>
-                      <span style={{ color: sc.trainable ? 'var(--ok)' : 'var(--text-3)' }} title={sc.reason}>
-                        {sc.trainable ? 'trainable' : 'unavailable'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="dim" style={{ fontSize: 11, marginTop: 10 }}>
-                  cache: {fmtNum(s.cacheEntries)} tile-months · {(s.cacheBytes / 1e6).toFixed(1)} MB · last fetch {relTime(s.latestCacheFetch)}
-                </div>
-              </div>
-            </div>
+
           </>
         )}
       </QueryState>
