@@ -112,30 +112,32 @@ export function IcebergDetailPanel({ icebergId }: { icebergId: string }) {
                     {f.fallback.used_model}.
                   </div>
                 )}
-                <table className="data">
-                  <thead>
-                    <tr>
-                      <th>D+</th>
-                      <th>DATE</th>
-                      <th>POSITION</th>
-                      <th className="num">MOVED</th>
-                      <th className="num">P90 R</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {f.points.map((p) => (
-                      <tr key={p.forecastId} style={{ opacity: p.horizonDays <= horizon ? 1 : 0.4 }}>
-                        <td className="mono">{p.horizonDays}</td>
-                        <td className="mono">{p.forecastDate}</td>
-                        <td className="mono">
-                          {formatLat(p.predictedLatitude)} {formatLon(p.predictedLongitude)}
-                        </td>
-                        <td className="mono num">{fmtKm(haversineKm(f.anchor.latitude, f.anchor.longitude, p.predictedLatitude, p.predictedLongitude))}</td>
-                        <td className="mono num">{fmtKm(p.riskRadiusKmP90)}</td>
+                <div className="table-wrap">
+                  <table className="data">
+                    <thead>
+                      <tr>
+                        <th>D+</th>
+                        <th>DATE</th>
+                        <th>POSITION</th>
+                        <th className="num">MOVED</th>
+                        <th className="num">P90 R</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {f.points.map((p) => (
+                        <tr key={p.forecastId} style={{ opacity: p.horizonDays <= horizon ? 1 : 0.4 }}>
+                          <td className="mono">{p.horizonDays}</td>
+                          <td className="mono">{p.forecastDate}</td>
+                          <td className="mono">
+                            {formatLat(p.predictedLatitude)} {formatLon(p.predictedLongitude)}
+                          </td>
+                          <td className="mono num">{fmtKm(haversineKm(f.anchor.latitude, f.anchor.longitude, p.predictedLatitude, p.predictedLongitude))}</td>
+                          <td className="mono num">{fmtKm(p.riskRadiusKmP90)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                   <div className="note">
                     One GRU inference produced all seven days; the {horizon}-day view highlights D+1…D+{horizon}. Input:{' '}
@@ -153,32 +155,34 @@ export function IcebergDetailPanel({ icebergId }: { icebergId: string }) {
                     {showInputs ? 'Hide' : 'Show'} 14 input entries
                   </button>
                   {showInputs && f.inputEntries && (
-                    <table className="data">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>DATE</th>
-                          <th>POSITION</th>
-                          <th className="num">Δt</th>
-                          <th>SOURCE</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {f.inputEntries.map((e, i) => (
-                          <tr key={i}>
-                            <td className="mono dim">{i + 1}</td>
-                            <td className="mono">{e.date}</td>
-                            <td className="mono">
-                              {formatLat(e.latitude)} {formatLon(e.longitude)}
-                            </td>
-                            <td className="mono num">{e.elapsedDays ? `${e.elapsedDays} d` : '—'}</td>
-                            <td>
-                              <ProvenanceChip provenance={e.provenance} />
-                            </td>
+                    <div className="table-wrap">
+                      <table className="data">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>DATE</th>
+                            <th>POSITION</th>
+                            <th className="num">Δt</th>
+                            <th>SOURCE</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {f.inputEntries.map((e, i) => (
+                            <tr key={i}>
+                              <td className="mono dim">{i + 1}</td>
+                              <td className="mono">{e.date}</td>
+                              <td className="mono">
+                                {formatLat(e.latitude)} {formatLon(e.longitude)}
+                              </td>
+                              <td className="mono num">{e.elapsedDays ? `${e.elapsedDays} d` : '—'}</td>
+                              <td>
+                                <ProvenanceChip provenance={e.provenance} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </>
@@ -196,26 +200,28 @@ export function IcebergDetailPanel({ icebergId }: { icebergId: string }) {
           emptyText="No evaluations yet. Past forecasts are scored when a later official USNIC observation falls on a forecast date (typically D+7 for the weekly product)."
         >
           {(evs) => (
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>DATE</th>
-                  <th>D+</th>
-                  <th>MODEL</th>
-                  <th className="num">ERROR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {evs.map((e) => (
-                  <tr key={e.evaluationId}>
-                    <td className="mono">{e.forecastDate}</td>
-                    <td className="mono">{e.horizonDays}</td>
-                    <td className="mono">{e.modelVersion}</td>
-                    <td className="mono num">{fmtKm(e.errorKm, 2)}</td>
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>DATE</th>
+                    <th>D+</th>
+                    <th>MODEL</th>
+                    <th className="num">ERROR</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {evs.map((e) => (
+                    <tr key={e.evaluationId}>
+                      <td className="mono">{e.forecastDate}</td>
+                      <td className="mono">{e.horizonDays}</td>
+                      <td className="mono">{e.modelVersion}</td>
+                      <td className="mono num">{fmtKm(e.errorKm, 2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </QueryState>
       </div>

@@ -22,24 +22,40 @@ export default function IcebergsPage() {
   const [filter, setFilter] = useState('');
   const q = useDeferredValue(filter.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
 
-  const { sidebarWidth, isDragging, isMobile, startResize, resetWidth } = useResizableSidebar({
-    storageKey: 'sagar_sidebar_width_icebergs',
-    defaultWidth: 540,
-    minWidth: 320,
-  });
+  const { sidebarWidth, sidebarHeight, isDragging, isMobile, startResize, resetSize } =
+    useResizableSidebar({
+      storageKey: 'sagar_sidebar_icebergs',
+      defaultWidth: 540,
+      minWidth: 320,
+    });
 
-  const rows = useMemo(() => (icebergs.data?.items ?? []).filter((b) => !q || b.icebergId.includes(q)), [icebergs.data, q]);
+  const rows = useMemo(
+    () => (icebergs.data?.items ?? []).filter((b) => !q || b.icebergId.includes(q)),
+    [icebergs.data, q]
+  );
   const stats = useMemo(() => {
     const items = icebergs.data?.items ?? [];
-    return { total: items.length, forecast: items.filter((b) => b.hasForecast).length, stale: items.filter((b) => b.isStale).length };
+    return {
+      total: items.length,
+      forecast: items.filter((b) => b.hasForecast).length,
+      stale: items.filter((b) => b.isStale).length,
+    };
   }, [icebergs.data]);
 
   return (
     <div
-      className="split-resizable"
-      style={isMobile ? undefined : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}
+      className={`split-resizable${isMobile ? ' mobile-stacked' : ''}`}
+      style={
+        isMobile
+          ? undefined
+          : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }
+      }
     >
-      <section className="split-left" aria-label="Tracked icebergs">
+      <section
+        className="split-left"
+        aria-label="Tracked icebergs"
+        style={isMobile ? { height: `${sidebarHeight}px`, flexShrink: 0 } : undefined}
+      >
         <div className="toolbar">
           <input
             className="search"
@@ -60,15 +76,22 @@ export default function IcebergsPage() {
           {() => <IcebergTable rows={rows} />}
         </QueryState>
       </section>
+
       <ResizeHandle
         width={sidebarWidth}
+        height={sidebarHeight}
         isDragging={isDragging}
         isMobile={isMobile}
         onPointerDown={startResize}
-        onDoubleClick={resetWidth}
-        label="Resize icebergs sidebar"
+        onDoubleClick={resetSize}
+        label="Resize icebergs split"
       />
-      <section className="split-right" aria-label="Map">
+
+      <section
+        className="split-right"
+        aria-label="Map"
+        style={isMobile ? { flex: 1, minHeight: 160 } : undefined}
+      >
         <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={horizon}>
           <div className="map-overlay map-controls">
             <HorizonSelector value={horizon} onChange={setHorizon} />

@@ -10,7 +10,10 @@ html,
 body,
 #root {
   height: 100%;
+  width: 100%;
   margin: 0;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -20,18 +23,6 @@ body {
   font-size: 13px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
-}
-
-@media (max-width: 767px) {
-  body {
-    overflow: auto;
-    overflow-x: hidden;
-  }
-  #root {
-    height: auto;
-    min-height: 100%;
-  }
 }
 
 a {
@@ -87,6 +78,9 @@ button {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .glass {
@@ -99,6 +93,7 @@ button {
 .scroll {
   overflow: auto;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sr-only {

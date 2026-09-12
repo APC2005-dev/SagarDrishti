@@ -14,18 +14,27 @@ export default function OverviewPage() {
   const icebergs = useIcebergs();
   const forecasts = useLatestForecasts();
 
-  const { sidebarWidth, isDragging, isMobile, startResize, resetWidth } = useResizableSidebar({
-    storageKey: 'sagar_sidebar_width_overview',
-    defaultWidth: 520,
-    minWidth: 380,
-  });
+  const { sidebarWidth, sidebarHeight, isDragging, isMobile, startResize, resetSize } =
+    useResizableSidebar({
+      storageKey: 'sagar_sidebar_overview',
+      defaultWidth: 520,
+      minWidth: 340,
+    });
 
   return (
     <div
-      className="split-resizable"
-      style={isMobile ? undefined : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}
+      className={`split-resizable${isMobile ? ' mobile-stacked' : ''}`}
+      style={
+        isMobile
+          ? undefined
+          : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }
+      }
     >
-      <section className="split-left scroll pad" aria-label="Mission summary">
+      <section
+        className="split-left scroll pad"
+        aria-label="Mission summary"
+        style={isMobile ? { height: `${sidebarHeight}px`, flexShrink: 0 } : undefined}
+      >
         <div className="page-head">
           <div>
             <h1>Mission overview</h1>
@@ -52,15 +61,22 @@ export default function OverviewPage() {
           )}
         </QueryState>
       </section>
+
       <ResizeHandle
         width={sidebarWidth}
+        height={sidebarHeight}
         isDragging={isDragging}
         isMobile={isMobile}
         onPointerDown={startResize}
-        onDoubleClick={resetWidth}
-        label="Resize overview sidebar"
+        onDoubleClick={resetSize}
+        label="Resize overview split"
       />
-      <section className="split-right" aria-label="Antarctic situation map">
+
+      <section
+        className="split-right"
+        aria-label="Antarctic situation map"
+        style={isMobile ? { flex: 1, minHeight: 160 } : undefined}
+      >
         <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={7} />
         {(icebergs.isError || forecasts.isError) && (
           <div className="map-overlay" style={{ bottom: 14, right: 14 }}>
