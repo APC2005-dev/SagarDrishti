@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Overview } from '../../types/api';
 import { fmtDate, fmtKm, fmtNum, relTime } from '../../utils/format';
 import { Metric } from '../common/Metric';
-import { FeedStateChip, RunStatusChip } from '../common/StatusChip';
+import { FeedStateChip } from '../common/StatusChip';
 
 /**
  * Overview widget registry. Adding a widget = appending an entry; the page lays
@@ -53,35 +53,6 @@ export const OVERVIEW_WIDGETS: OverviewWidget[] = [
     ),
   },
   {
-    id: 'model',
-    title: 'Forecast model',
-    render: (o) =>
-      o.champion ? (
-        <div className="grid-tiles">
-          <Metric label="Champion" value={o.champion.version} tone="forecast" sub={`${o.champion.architectureVersion} · ${o.champion.modelType}`} />
-          <Metric
-            label="Feature schema"
-            value={o.champion.featureSchemaVersion}
-            sub={o.champion.featureSchemaDescription ?? undefined}
-            title={o.champion.environmentalSources.length ? `Sources: ${o.champion.environmentalSources.join(', ')}` : 'Trajectory features only'}
-          />
-          <Metric label="Adapter" value={o.champion.adapterStrategy ?? '—'} sub={`${o.modelVersions} versions registered`} />
-          <Metric label="Active forecasts" value={fmtNum(o.icebergsWithActiveForecasts)} sub="from latest official fix" />
-          <div className="metric">
-            <span className="label">Pipeline</span>
-            <div style={{ marginTop: 6 }}>
-              <FeedStateChip state={o.pipelineState} />
-            </div>
-            <div className="metric-sub">
-              last run {o.lastForecastRun ? <RunStatusChip status={o.lastForecastRun.status} /> : 'never'}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="note warn">No model is deployed. Official positions are shown; forecasts are unavailable until the base artifact is registered.</div>
-      ),
-  },
-  {
     id: 'accuracy',
     title: 'Model accuracy (mean great-circle error)',
     span: 2,
@@ -107,39 +78,6 @@ export const OVERVIEW_WIDGETS: OverviewWidget[] = [
             />
           );
         })}
-      </div>
-    ),
-  },
-  {
-    id: 'learning',
-    title: 'Evaluation & retraining',
-    render: (o) => (
-      <div className="grid-tiles">
-        <Metric label="Evaluations" value={fmtNum(o.evaluationsTotal)} sub="prediction vs official" />
-        <div className="metric">
-          <span className="label">Last retraining</span>
-          <div style={{ marginTop: 6 }}>{o.retrainingStatus ? <RunStatusChip status={o.retrainingStatus} /> : <span className="dim mono">none yet</span>}</div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'environment',
-    title: 'Environmental forcing (wind · current · sea ice)',
-    render: (o) => (
-      <div className="grid-tiles">
-        <Metric
-          label="Pipeline"
-          value={o.environment?.enabled ? 'ENABLED' : 'DISABLED'}
-          sub="environmental model versions only"
-          tone={o.environment?.enabled ? 'ok' : 'default'}
-        />
-        <Metric label="Last env. sync" value={relTime(o.environment?.lastSyncAt)} sub={o.environment?.configuredGroups.join(' · ') || 'no source has delivered data yet'} />
-        <Metric
-          label="Champion env. sources"
-          value={o.champion?.environmentalSources.length ? String(o.champion.environmentalSources.length) : 'none'}
-          sub={o.champion?.environmentalSources.join(', ') || 'champion uses trajectory features only'}
-        />
       </div>
     ),
   },
