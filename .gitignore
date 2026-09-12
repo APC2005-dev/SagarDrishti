@@ -29,8 +29,8 @@ models/**/*.keras
 models/**/*.joblib
 models/.v*-*/
 
-.DS_Store
 
 # claude
 .claude/
-models/v1/
+
+
