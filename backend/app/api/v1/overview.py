@@ -12,6 +12,7 @@ from app.schemas.ml import HorizonMetrics
 from app.schemas.operations import ChampionSummary, EnvironmentSummary, ForecastRunOut, Overview
 from app.services.status_service import feed_state
 from ml.features.schemas import get_schema
+from ml.versioning.version_manager import FAMILY_TRAJECTORY
 
 router = APIRouter(prefix="/overview", tags=["overview"])
 
@@ -35,7 +36,8 @@ async def overview(session: SessionDep, settings: SettingsDep) -> Overview:
         latest.status if latest else None, latest.new_observations if latest else 0,
         success.fetched_at if success else None, latest_date, settings.feed_degraded_after_hours, settings.stale_after_days, now,
     )
-    champion = await queries.deployed_model(session)
+    # The overview's pipeline state describes the iceberg product.
+    champion = await queries.deployed_model(session, FAMILY_TRAJECTORY)
     fruns = await queries.forecast_runs(session, 1)
     rruns = await queries.retraining_runs(session, 1)
     agg = await queries.evaluation_aggregates(session, champion.version if champion else None) if champion else []

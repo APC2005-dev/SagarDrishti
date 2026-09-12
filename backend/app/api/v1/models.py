@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import Limit, SessionDep
 from app.api.serializers import evaluation_out
@@ -16,26 +18,42 @@ from app.schemas.ml import (
     StatusEventOut,
 )
 from ml.features.schemas import get_schema
+from ml.versioning.version_manager import FAMILY_TRAJECTORY
 
 router = APIRouter(prefix="/models", tags=["models"])
 
 
-@router.get("", response_model=list[ModelVersionOut], summary="All model versions (base, v1 ... vN)")
-async def list_models(session: SessionDep) -> list[ModelVersionOut]:
-    return [ModelVersionOut.model_validate(m) for m in await queries.model_versions(session)]
+Family = Annotated[
+    str,
+    Query(description="Model family: independent lineages, each with its own champion."),
+]
 
 
-@router.get("/current", response_model=ModelVersionOut, responses=ERROR_RESPONSES, summary="Deployed champion")
-async def current(session: SessionDep) -> ModelVersionOut:
-    mv = await queries.deployed_model(session)
+@router.get("", response_model=list[ModelVersionOut], summary="Model versions of one family (base, v1 ... vN)")
+async def list_models(session: SessionDep, family: Family = FAMILY_TRAJECTORY) -> list[ModelVersionOut]:
+    return [ModelVersionOut.model_validate(m) for m in await queries.model_versions(session, family)]
+
+
+@router.get("/current", response_model=ModelVersionOut, responses=ERROR_RESPONSES,
+            summary="Deployed champion of one model family")
+async def current(session: SessionDep, family: Family = FAMILY_TRAJECTORY) -> ModelVersionOut:
+    """The champion is whichever version of THIS family is ``deployed`` — never the
+    highest number, and never another family's model."""
+    mv = await queries.deployed_model(session, family)
     if mv is None:
-        raise HTTPException(404, "no model is deployed")
+        raise HTTPException(404, f"no model is deployed for family {family!r}")
     return ModelVersionOut.model_validate(mv)
 
 
+@router.get("/champions", response_model=dict[str, ModelVersionOut],
+            summary="Current champion of every model family")
+async def champions(session: SessionDep) -> dict[str, ModelVersionOut]:
+    return {f: ModelVersionOut.model_validate(m) for f, m in (await queries.deployed_models(session)).items()}
+
+
 @router.get("/lineage", response_model=list[LineageNode], summary="Parent/child graph including rejected branches")
-async def lineage(session: SessionDep) -> list[LineageNode]:
-    return [LineageNode.model_validate(m) for m in await queries.model_versions(session)]
+async def lineage(session: SessionDep, family: Family = FAMILY_TRAJECTORY) -> list[LineageNode]:
+    return [LineageNode.model_validate(m) for m in await queries.model_versions(session, family)]
 
 
 @router.get("/{version}", response_model=ModelVersionDetail, responses=ERROR_RESPONSES, summary="Model metadata, metrics and status history")

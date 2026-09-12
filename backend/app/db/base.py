@@ -14,6 +14,7 @@ NAMING_CONVENTION = {
 TRACKING_SCHEMA = "tracking"
 ML_SCHEMA = "ml"
 ENV_SCHEMA = "environmental"
+SEAICE_SCHEMA = "seaice"
 
 
 class Base(DeclarativeBase):

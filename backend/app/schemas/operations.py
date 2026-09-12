@@ -107,7 +107,9 @@ class FeedOut(ApiModel):
     record_count: int | None
     discovery_method: str | None
     error_message: str | None
-    category: str = "iceberg"  # iceberg | environmental
+    # iceberg and sea_ice are CORE model feeds; environmental covers the
+    # future feature sources (wind, current, ...).
+    category: str = "iceberg"  # iceberg | sea_ice | environmental
     configured: bool = True
 
 

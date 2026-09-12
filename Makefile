@@ -47,7 +47,7 @@ migrate:
 	cd backend && ../$(PY) -m alembic upgrade head
 
 # --- pipeline operations (synchronous, via CLI) --------------------------------
-load-historical:  ## BYU training dataset -> tracking.observations (provenance historical_training_dataset)
+load-historical:  ## BYU icebergs -> tracking.observations, plus official sea-ice history -> seaice.observations
 	$(CLI) load-historical
 bootstrap:        ## register models/base and create + deploy v1
 	$(CLI) register-base && $(CLI) bootstrap-v1

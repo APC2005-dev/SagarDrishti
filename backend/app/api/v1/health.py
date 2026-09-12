@@ -6,6 +6,7 @@ from fastapi import APIRouter, Response
 from sqlalchemy import text
 
 from app.api.deps import SessionDep, SettingsDep
+from app.models.ml import MODEL_FAMILIES
 from app.repositories import queries
 from app.schemas.operations import HealthCheck
 
@@ -28,13 +29,20 @@ async def ready(session: SessionDep, settings: SettingsDep, response: Response) 
         checks["database"] = {"ok": False, "error": type(exc).__name__}
         response.status_code = 503
         return HealthCheck(status="unavailable", checks=checks, version=settings.app_version)
-    champion = await queries.deployed_model(session)
-    if champion is None:
-        checks["model"] = {"ok": False, "error": "no deployed model"}
-        status = "degraded"
-    else:
-        present = Path(champion.model_path).exists() and Path(champion.scaler_path).exists()
-        checks["model"] = {"ok": present, "version": champion.version}
+    # Every core model family reports separately. Two families each having a
+    # deployed champion is a healthy state, not an error.
+    champions = await queries.deployed_models(session)
+    for family in MODEL_FAMILIES:
+        champion = champions.get(family)
+        if champion is None:
+            checks[f"model:{family}"] = {"ok": False, "error": "no deployed model"}
+            status = "degraded"
+            continue
+        # Only the artifacts a family actually has are checked: the sea-ice
+        # .pt carries its preprocessing in metadata and has no separate scaler.
+        artifacts = [champion.model_path, *( [champion.scaler_path] if champion.scaler_path else [] )]
+        present = all(Path(a).exists() for a in artifacts)
+        checks[f"model:{family}"] = {"ok": present, "version": champion.version}
         if not present:
             status = "degraded"
     return HealthCheck(status=status, checks=checks, version=settings.app_version)  # type: ignore[arg-type]

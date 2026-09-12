@@ -1,14 +1,14 @@
 import type {
   BasemapInfo,
-  EvaluationSummary,
-  Evaluation,
-  Feed,
-  ForecastRun,
-  ForecastSet,
   EnvField,
   EnvGroup,
   EnvRun,
   EnvStatus,
+  Evaluation,
+  EvaluationSummary,
+  Feed,
+  ForecastRun,
+  ForecastSet,
   HealthCheck,
   IcebergDetail,
   IcebergEnvironment,
@@ -20,6 +20,8 @@ import type {
   Overview,
   Page,
   RetrainingStatus,
+  SeaIceField,
+  SeaIceStatus,
 } from '../types/api';
 
 const BASE = '/api/v1';
@@ -96,4 +98,9 @@ export const api = {
   environmentRuns: () => get<EnvRun[]>('/environment/runs', { limit: 30 }),
   environmentField: (group: EnvGroup) => get<EnvField>('/environment/field', { group }),
   icebergEnvironment: (id: string) => get<IcebergEnvironment>(`/icebergs/${encodeURIComponent(id)}/environment`),
+  seaIceStatus: () => get<SeaIceStatus>('/sea-ice/status'),
+  seaIceField: (horizon: number | null, stride = 1) =>
+    horizon == null
+      ? get<SeaIceField>('/sea-ice/latest', { stride })
+      : get<SeaIceField>('/sea-ice/forecast', { horizon, stride }),
 };

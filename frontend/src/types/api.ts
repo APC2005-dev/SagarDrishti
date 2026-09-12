@@ -369,7 +369,8 @@ export interface Feed {
   recordCount: number | null;
   discoveryMethod: string | null;
   errorMessage: string | null;
-  category: 'iceberg' | 'environmental';
+  /** iceberg and sea_ice are CORE model feeds; environmental are feature sources. */
+  category: 'iceberg' | 'sea_ice' | 'environmental';
   configured: boolean;
 }
 
@@ -514,4 +515,122 @@ export interface HealthCheck {
   status: 'ok' | 'degraded' | 'unavailable';
   checks: Record<string, Record<string, unknown>>;
   version: string;
+}
+
+/* --- Sea ice: a core model family with its own lineage, data and champion --- */
+
+export interface SeaIceModel {
+  version: string;
+  shortVersion: string;
+  family: string;
+  versionNumber: number;
+  parentVersion: string | null;
+  architecture: string;
+  architectureVersion: string;
+  status: string;
+  statusReason: string | null;
+  artifactOrigin: string;
+  /** Chronological database entries per input sequence — NOT calendar days. */
+  inputWindowEntries: number;
+  forecastHorizonsDays: number[];
+  deployedAt: string | null;
+  trainingDataCutoff: string | null;
+  day1Rmse: number | null;
+  day3Rmse: number | null;
+  day7Rmse: number | null;
+}
+
+export interface SeaIceObservation {
+  observationDate: string;
+  provenance: string;
+  authority: string;
+  datasetId: string;
+  variable: string;
+  preprocessingVersion: string;
+  gridShape: number[];
+  gridResolutionDeg: number;
+  crs: string;
+  nValidCells: number;
+  meanConcentration: number | null;
+  fetchedAt: string;
+  sourceTime: string | null;
+}
+
+export interface SeaIceWindowEntry {
+  observationDate: string;
+  nValidCells: number;
+  meanConcentration: number | null;
+}
+
+export interface SeaIceForecast {
+  modelVersion: string;
+  anchorDate: string;
+  generatedAt: string;
+  horizonDays: number;
+  targetDate: string;
+  meanConcentration: number | null;
+  inputWindowEntries: number;
+  inputEntryDates: string[];
+  inputSpanDays: number | null;
+  dailyCadence: boolean | null;
+}
+
+export interface SeaIceEvaluation {
+  modelVersion: string;
+  horizonDays: number;
+  anchorDate: string;
+  targetDate: string;
+  rmse: number;
+  mae: number;
+  persistenceRmse: number | null;
+  persistenceMae: number | null;
+  nValidCells: number;
+  evaluatedAt: string;
+}
+
+export interface SeaIceRun {
+  id: number;
+  kind: string;
+  trigger: string;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+  entriesNew: number;
+  entriesDuplicate: number;
+  sourceLatestDate: string | null;
+  errorMessage: string | null;
+}
+
+export interface SeaIceField {
+  kind: 'observation' | 'forecast';
+  validDate: string;
+  horizonDays: number | null;
+  modelVersion: string | null;
+  anchorDate: string | null;
+  resolutionDeg: number;
+  crs: string;
+  minConcentration: number;
+  meanConcentration: number | null;
+  /** [lat, lon, concentration] per ice-covered cell */
+  points: number[][];
+}
+
+export interface SeaIceStatus {
+  enabled: boolean;
+  sourceConfigured: boolean;
+  sourceReason: string | null;
+  datasetId: string;
+  authority: string;
+  model: SeaIceModel | null;
+  modelUnavailableReason: string | null;
+  latestObservation: SeaIceObservation | null;
+  observationCount: number;
+  windowEntriesRequired: number;
+  window: SeaIceWindowEntry[];
+  windowComplete: boolean;
+  forecastUnavailableReason: string | null;
+  latestForecasts: SeaIceForecast[];
+  recentEvaluations: SeaIceEvaluation[];
+  recentRuns: SeaIceRun[];
 }

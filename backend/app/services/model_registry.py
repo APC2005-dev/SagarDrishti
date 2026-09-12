@@ -39,7 +39,7 @@ from ml.models.model_loader import (
     read_metadata,
     resolve_artifacts_or_none,
 )
-from ml.versioning.version_manager import BASE_VERSION, version_number
+from ml.versioning.version_manager import BASE_VERSION, FAMILY_TRAJECTORY, version_number
 
 log = get_logger(__name__)
 
@@ -82,10 +82,21 @@ class ModelRegistry:
         return self.session.execute(select(ModelVersion).where(ModelVersion.version == version)).scalar_one_or_none()
 
     def get_deployed(self) -> ModelVersion | None:
-        return self.session.execute(select(ModelVersion).where(ModelVersion.status == "deployed")).scalar_one_or_none()
+        """This family's champion. Other model families have their own, in the same table."""
+        return self.session.execute(
+            select(ModelVersion).where(
+                ModelVersion.model_family == FAMILY_TRAJECTORY, ModelVersion.status == "deployed"
+            )
+        ).scalar_one_or_none()
 
     def list_versions(self) -> list[ModelVersion]:
-        return list(self.session.execute(select(ModelVersion).order_by(ModelVersion.version_number)).scalars())
+        return list(
+            self.session.execute(
+                select(ModelVersion)
+                .where(ModelVersion.model_family == FAMILY_TRAJECTORY)
+                .order_by(ModelVersion.version_number)
+            ).scalars()
+        )
 
     def lineage(self) -> list[LineageNode]:
         return [

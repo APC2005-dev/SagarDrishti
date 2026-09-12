@@ -141,16 +141,42 @@ def forecast_rows(
     return q.order_by(Forecast.generated_at.desc(), Forecast.iceberg_id, Forecast.forecast_horizon_days)
 
 
-async def model_versions(session: AsyncSession) -> list[ModelVersion]:
-    return list((await session.execute(select(ModelVersion).order_by(ModelVersion.version_number))).scalars())
+async def model_versions(session: AsyncSession, model_family: str | None = None) -> list[ModelVersion]:
+    """Versions of one family, or of every family when ``model_family`` is None."""
+    query = select(ModelVersion).order_by(ModelVersion.model_family, ModelVersion.version_number)
+    if model_family is not None:
+        query = query.where(ModelVersion.model_family == model_family)
+    return list((await session.execute(query)).scalars())
 
 
 async def model_version(session: AsyncSession, version: str) -> ModelVersion | None:
     return (await session.execute(select(ModelVersion).where(ModelVersion.version == version))).scalar_one_or_none()
 
 
-async def deployed_model(session: AsyncSession) -> ModelVersion | None:
-    return (await session.execute(select(ModelVersion).where(ModelVersion.status == "deployed"))).scalar_one_or_none()
+async def deployed_model(session: AsyncSession, model_family: str) -> ModelVersion | None:
+    """The champion OF ONE MODEL FAMILY.
+
+    ``deployed`` is unique **per family**, not globally: trajectory and sea-ice
+    each have their own champion at the same time, which is a valid state (the
+    partial unique index in migration 0003 enforces exactly one per family).
+    ``model_family`` is required precisely so no caller can accidentally ask the
+    global question again and get another family's model back.
+    """
+    return (
+        await session.execute(
+            select(ModelVersion).where(
+                ModelVersion.model_family == model_family, ModelVersion.status == "deployed"
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def deployed_models(session: AsyncSession) -> dict[str, ModelVersion]:
+    """Every family's champion, keyed by family — for status/health style endpoints."""
+    rows = (
+        await session.execute(select(ModelVersion).where(ModelVersion.status == "deployed"))
+    ).scalars()
+    return {m.model_family: m for m in rows}
 
 
 async def model_metrics(session: AsyncSession, version: str) -> list[ModelMetric]:

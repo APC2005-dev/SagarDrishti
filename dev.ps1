@@ -32,7 +32,7 @@ Usage: dev <target> [<target> ...]
   frontend         run the UI  on http://localhost:5173   (keeps running)
   worker           Celery worker                          (keeps running)
   scheduler        Celery beat scheduler                  (keeps running)
-  load-historical  load the BYU historical dataset
+  load-historical  load the BYU iceberg dataset + official sea-ice history
   bootstrap        register models/base and deploy v1
   ingest           fetch the USNIC CSV now   (-File x.csv to import a file)
   forecast         generate forecasts with the deployed model
@@ -80,6 +80,13 @@ foreach ($Target in $Targets) {
         "env-status"      { Invoke-AppCli @("env-status") }
         "env-align"       { Invoke-AppCli @("env-align") }
         "env-overlay"     { Invoke-AppCli @("env-overlay") }
+        "seaice-bootstrap" { Invoke-AppCli @("seaice-register-base"); Invoke-AppCli @("seaice-bootstrap") }
+        "seaice-load-historical" { Invoke-AppCli @("seaice-load-historical") }
+        "seaice-ingest"   { Invoke-AppCli @("seaice-ingest") }
+        "seaice-forecast" { Invoke-AppCli @("seaice-forecast") }
+        "seaice-evaluate" { Invoke-AppCli @("seaice-evaluate") }
+        "seaice-retrain"  { Invoke-AppCli @("seaice-retrain") }
+        "seaice-status"   { Invoke-AppCli @("seaice-status") }
         "env-prefetch"    { Invoke-AppCli @("env-prefetch") }
         "test"            { & $Py -m pytest "$Root\ml\tests" "$Root\backend\tests" -q; Push-Location "$Root\frontend"; npm test; Pop-Location }
         "lint"            { & $Py -m ruff check "$Root\ml" "$Root\backend\app" "$Root\backend\tests"; Push-Location "$Root\frontend"; npm run typecheck; Pop-Location }

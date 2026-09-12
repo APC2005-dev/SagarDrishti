@@ -74,3 +74,16 @@ export const useEnvironmentField = (group: EnvGroup, enabled: boolean) =>
   useQuery({ queryKey: ['environmentField', group], queryFn: () => api.environmentField(group), enabled, retry: false, staleTime: 30 * MIN });
 export const useIcebergEnvironment = (id: string | null) =>
   useQuery({ queryKey: ['icebergEnvironment', id ?? ''], queryFn: () => api.icebergEnvironment(id!), enabled: !!id });
+
+/** Sea ice is its own core product: its own champion, data window and forecasts. */
+export const useSeaIceStatus = () =>
+  useQuery({ queryKey: ['seaIceStatus'], queryFn: api.seaIceStatus, refetchInterval: POLL.overview });
+/** horizon = null requests the latest official observation instead of a forecast. */
+export const useSeaIceField = (horizon: number | null, enabled: boolean) =>
+  useQuery({
+    queryKey: ['seaIceField', horizon],
+    queryFn: () => api.seaIceField(horizon),
+    enabled,
+    retry: false,
+    staleTime: 30 * MIN,
+  });

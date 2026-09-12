@@ -1,0 +1,144 @@
+{
+  "model_family": "sea_ice",
+  "version": "base",
+  "parent_version": null,
+  "architecture": "UNetResidual",
+  "architecture_version": "unet_residual_v4",
+  "artifact_origin": "notebook_run",
+  "description": "Immutable base sea-ice model (U-Net Residual v4) supplied as unet_residual_v4_best.pt. Never overwritten; production versions are derived from it.",
+  "source": {
+    "authority": "Copernicus Marine Service (CMEMS) / EUMETSAT OSI SAF",
+    "dataset_id": "osisaf_obs-si_glo_phy-sic-south_nrt_amsr2_l4_P1D-m",
+    "variable": "ice_conc",
+    "source_units": "%",
+    "value_units": "1",
+    "temporal_resolution": "P1D",
+    "native_resolution_deg": 0.1,
+    "native_shape": [
+      500,
+      3600
+    ],
+    "crs": "EPSG:4326",
+    "latitude_range": [
+      -85.0,
+      -35.1
+    ],
+    "longitude_range": [
+      -180.0,
+      179.9
+    ]
+  },
+  "preprocessing": {
+    "scale": "ice_conc / 100.0 -> fraction",
+    "coarsen": {
+      "latitude": 5,
+      "longitude": 5,
+      "boundary": "trim",
+      "reduction": "mean(skipna=True)"
+    },
+    "grid_shape": [
+      100,
+      720
+    ],
+    "grid_resolution_deg": 0.5,
+    "missing_values": "concentration NaN -> 0.0; validity mask = ~isnan, carried as its own channels",
+    "seasonal_encoding": "sin/cos of day-of-year (denominator 365.25) of the first forecast target"
+  },
+  "input_semantics": "chronological_observation_entries",
+  "input_window_entries": 7,
+  "input_window_note": "SEA-ICE MODEL INPUT WINDOW = LAST 7 CHRONOLOGICAL DATABASE ENTRIES, not a 7-calendar-day span.",
+  "input_channels": 16,
+  "channel_layout": [
+    "ice_conc_entry_1",
+    "ice_conc_entry_2",
+    "ice_conc_entry_3",
+    "ice_conc_entry_4",
+    "ice_conc_entry_5",
+    "ice_conc_entry_6",
+    "ice_conc_entry_7",
+    "valid_mask_entry_1",
+    "valid_mask_entry_2",
+    "valid_mask_entry_3",
+    "valid_mask_entry_4",
+    "valid_mask_entry_5",
+    "valid_mask_entry_6",
+    "valid_mask_entry_7",
+    "day_of_year_sin",
+    "day_of_year_cos"
+  ],
+  "output_channels": 3,
+  "forecast_horizons_days": [
+    1,
+    3,
+    7
+  ],
+  "output_formulation": "residual: clamp(persistence + model(x), 0, 1); persistence = ice_conc_entry_7",
+  "parameters": 483939,
+  "training": {
+    "framework": "pytorch",
+    "artifact_format": "state_dict",
+    "optimizer": "Adam",
+    "learning_rate": 0.001,
+    "batch_size": 8,
+    "max_epochs": 200,
+    "early_stopping_patience": 15,
+    "loss": "masked RMSE",
+    "seed": 42,
+    "data_range": [
+      "2024-09-01",
+      "2026-08-25"
+    ],
+    "split": {
+      "strategy": "chronological",
+      "train_end": "2026-02-28",
+      "validation_end": "2026-05-31",
+      "test": "after 2026-05-31"
+    }
+  },
+  "training_data_cutoff": "2026-08-25",
+  "metrics": {
+    "protocol": "historical_test",
+    "masking": "validity-mask weighted",
+    "by_horizon": {
+      "1": {
+        "rmse": 0.04164,
+        "mae": 0.01434
+      },
+      "3": {
+        "rmse": 0.07232,
+        "mae": 0.02546
+      },
+      "7": {
+        "rmse": 0.09699,
+        "mae": 0.03507
+      }
+    },
+    "aggregate_batch_mean": {
+      "rmse": 0.07333,
+      "mae": 0.02487
+    },
+    "persistence_baseline": {
+      "by_horizon": {
+        "1": {
+          "rmse": 0.04444,
+          "mae": 0.01435
+        },
+        "3": {
+          "rmse": 0.08076,
+          "mae": 0.02645
+        },
+        "7": {
+          "rmse": 0.11255,
+          "mae": 0.03736
+        }
+      },
+      "aggregate_batch_mean": {
+        "rmse": 0.08333,
+        "mae": 0.02595
+      }
+    }
+  },
+  "artifact_sha256": {
+    "unet_residual_v4_best.pt": "c8bdaeab34303c3d8fc9fa2345f53fc26c2a722eae1bccfb4e80ab7deb32d1b1"
+  }
+}

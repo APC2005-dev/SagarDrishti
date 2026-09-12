@@ -14,46 +14,25 @@ const PLANNED = [{ name: 'Vessel positions (AIS)', note: 'Route planning input.'
 export default function FeedsPage() {
   const feeds = useFeeds();
 
-  const filteredFeeds = useMemo(() => {
+  /**
+   * Driven entirely by the backend list. Core model feeds (the iceberg CSV and
+   * the sea-ice product the U-Net was trained on) come first; environmental
+   * sources are the future feature inputs and are labelled as such. Nothing is
+   * invented here when a feed is missing — an absent feed simply is not shown.
+   */
+  const { coreFeeds, environmentalFeeds } = useMemo(() => {
     const list = feeds.data ?? [];
-    const usnic = list.find((f) => f.id === 'usnic_antarctic_icebergs');
-    const seaIce = list.find((f) => f.id === 'env_historical_sea_ice' || f.id === 'env_operational_sea_ice');
-
-    const result: Feed[] = [];
-    if (usnic) {
-      result.push(usnic);
-    }
-    if (seaIce) {
-      result.push({
-        ...seaIce,
-        name: 'Copernicus Antarctic Sea-Ice Feed',
-      });
-    } else {
-      result.push({
-        id: 'env_historical_sea_ice',
-        name: 'Copernicus Antarctic Sea-Ice Feed',
-        provider: 'Copernicus Marine Service (CMEMS)',
-        description: 'GLOBAL_MULTIYEAR_PHY_001_030 / cmems_mod_glo_phy_my_0.083deg_P1D-m. daily means (siconc). Sea-ice concentration from the global model.',
-        productUrl: 'https://data.marine.copernicus.eu',
-        sourceUrl: 'cmems_mod_glo_phy_my_0.083deg_P1D-m',
-        cadence: 'P1D native, daily values; latency ~60 d',
-        pollIntervalHours: 24,
-        state: 'UNKNOWN',
-        stateReasons: ['not configured: copernicusmarine package or credentials not available'],
-        lastFetchAt: null,
-        lastSuccessAt: null,
-        latestOfficialObservationDate: null,
-        fetchDurationMs: null,
-        checksumSha256: null,
-        recordCount: 0,
-        discoveryMethod: 'historical',
-        errorMessage: null,
-        category: 'environmental',
-        configured: false,
-      });
-    }
-    return result;
+    const rank = (f: Feed) => (f.category === 'iceberg' ? 0 : f.category === 'sea_ice' ? 1 : 2);
+    const sorted = [...list].sort((a, b) => rank(a) - rank(b));
+    return {
+      coreFeeds: sorted.filter((f) => f.category !== 'environmental'),
+      environmentalFeeds: sorted.filter((f) => f.category === 'environmental'),
+    };
   }, [feeds.data]);
+  const filteredFeeds = useMemo(
+    () => [...coreFeeds, ...environmentalFeeds],
+    [coreFeeds, environmentalFeeds],
+  );
 
   return (
     <div className="page-scroll">
@@ -84,7 +63,11 @@ export default function FeedsPage() {
                       <span className="dim">{f.provider}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                      {f.category === 'environmental' && <Chip tone="neutral">ENVIRONMENTAL</Chip>}
+                      {f.category === 'environmental' ? (
+                        <Chip tone="neutral">ENVIRONMENTAL</Chip>
+                      ) : (
+                        <Chip tone="info">CORE MODEL FEED</Chip>
+                      )}
                       <FeedStateChip state={f.state} />
                     </div>
                   </div>

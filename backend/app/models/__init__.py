@@ -9,6 +9,13 @@ from app.models.ml import (
     ModelVersion,
     RetrainingRun,
 )
+from app.models.seaice import (
+    SeaIceEvaluation,
+    SeaIceForecast,
+    SeaIceForecastSet,
+    SeaIceObservation,
+    SeaIceRun,
+)
 from app.models.tracking import Iceberg, IngestionRowError, IngestionRun, Observation, ObservationRevision
 
 __all__ = [
@@ -29,4 +36,9 @@ __all__ = [
     "ObservationEnvironment",
     "ObservationRevision",
     "RetrainingRun",
+    "SeaIceEvaluation",
+    "SeaIceForecast",
+    "SeaIceForecastSet",
+    "SeaIceObservation",
+    "SeaIceRun",
 ]

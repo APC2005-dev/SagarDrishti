@@ -62,7 +62,10 @@ class RetrainingRun(Base):
     experiment: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
-MODEL_TYPES = ("base", "trajectory", "environmental")
+MODEL_TYPES = ("base", "trajectory", "environmental", "sea_ice")
+# Model families have INDEPENDENT version lineages: trajectory v4 and sea-ice v4
+# are unrelated models that merely share a number.
+MODEL_FAMILIES = ("trajectory", "sea_ice")
 
 
 class ModelVersion(Base):
@@ -71,14 +74,24 @@ class ModelVersion(Base):
         CheckConstraint(_in("status", MODEL_STATUSES), name="status"),
         CheckConstraint("version_number >= 0", name="version_number"),
         CheckConstraint(_in("model_type", MODEL_TYPES), name="model_type"),
-        # At most one champion at any time.
-        Index("uq_model_versions_single_deployed", "status", unique=True, postgresql_where=text("status = 'deployed'")),
+        CheckConstraint(_in("model_family", MODEL_FAMILIES), name="model_family"),
+        # Version numbers are scoped to a family, so each lineage counts from 1
+        # independently.
+        UniqueConstraint("model_family", "version_number", name="uq_model_versions_family_version_number"),
+        # At most one champion per family at any time.
+        Index("uq_model_versions_single_deployed", "model_family", unique=True,
+              postgresql_where=text("status = 'deployed'")),
         {"schema": ML_SCHEMA},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    # Globally unique storage key. Trajectory keeps its bare identifiers
+    # ("base", "v1", ...); other families are qualified ("sea_ice/v1"), which
+    # keeps every existing foreign key to this column valid while letting each
+    # family number its own lineage. Use ``short_version`` for display.
     version: Mapped[str] = mapped_column(String(32), unique=True)
-    version_number: Mapped[int] = mapped_column(Integer, unique=True)
+    model_family: Mapped[str] = mapped_column(String(16), server_default="trajectory", index=True)
+    version_number: Mapped[int] = mapped_column(Integer)
     parent_version: Mapped[str | None] = mapped_column(ForeignKey(f"{ML_SCHEMA}.model_versions.version"), index=True)
     architecture: Mapped[str] = mapped_column(String(32))
     architecture_version: Mapped[str] = mapped_column(String(64))
@@ -112,6 +125,11 @@ class ModelVersion(Base):
     feature_schema_version: Mapped[str] = mapped_column(String(48), server_default="trajectory_v1", index=True)
     environmental_data_sources: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     environmental_data_cutoff: Mapped[date | None] = mapped_column(Date)
+
+    @property
+    def short_version(self) -> str:
+        """The identifier as its own family numbers it: ``sea_ice/v3`` -> ``v3``."""
+        return self.version.rpartition("/")[2]
 
 
 class ModelStatusEvent(Base):

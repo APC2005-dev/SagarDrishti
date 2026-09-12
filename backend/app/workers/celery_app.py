@@ -31,12 +31,23 @@ celery_app.conf.update(
         "app.workers.tasks.usnic_ingestion_job": {"queue": "ingestion"},
         "app.workers.tasks.*": {"queue": "ml"},
     },
-    task_annotations={"app.workers.tasks.retraining_job": {"time_limit": 6 * 3600, "soft_time_limit": 5.5 * 3600}},
+    task_annotations={
+        "app.workers.tasks.retraining_job": {"time_limit": 6 * 3600, "soft_time_limit": 5.5 * 3600},
+        "app.workers.tasks.seaice_retraining_job": {"time_limit": 6 * 3600, "soft_time_limit": 5.5 * 3600},
+    },
     beat_schedule={
         "usnic-ingestion": {"task": "app.workers.tasks.usnic_ingestion_job", "schedule": timedelta(hours=settings.ingestion_interval_hours)},
         "retraining-check": {"task": "app.workers.tasks.retraining_job", "schedule": timedelta(hours=settings.retrain_check_interval_hours)},
         "model-validation": {"task": "app.workers.tasks.model_validation_job", "schedule": timedelta(hours=24)},
         "environment-overlay": {"task": "app.workers.tasks.environment_overlay_job", "schedule": timedelta(hours=24)},
+        # Sea ice: CHECK the official source on this cadence (~3 days). This is a
+        # data poll, not a version schedule — no model version comes from it.
+        "seaice-ingestion": {"task": "app.workers.tasks.seaice_ingestion_job",
+                             "schedule": timedelta(hours=settings.seaice_poll_interval_hours)},
+        "seaice-retraining-check": {"task": "app.workers.tasks.seaice_retraining_job",
+                                    "schedule": timedelta(hours=settings.retrain_check_interval_hours)},
+        "seaice-model-validation": {"task": "app.workers.tasks.seaice_model_validation_job",
+                                    "schedule": timedelta(hours=24)},
     },
 )
 

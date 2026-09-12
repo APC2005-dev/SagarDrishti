@@ -29,6 +29,7 @@ os.environ["BASEMAP_CACHE_DIR"] = str(_TMP / "basemap")
 # in the suite may reach Copernicus / CDS even if real credentials are present in .env.
 os.environ["ENV_ENABLED"] = "false"
 os.environ["ENV_CACHE_DIR"] = str(_TMP / "environment")
+os.environ["SEAICE_DATA_DIR"] = str(_TMP / "seaice")
 for _cred in ("COPERNICUS_MARINE_USERNAME", "COPERNICUS_MARINE_PASSWORD", "COPERNICUSMARINE_SERVICE_USERNAME",
               "COPERNICUSMARINE_SERVICE_PASSWORD", "CDSAPI_KEY", "CDS_API_KEY"):
     os.environ[_cred] = ""
@@ -99,11 +100,17 @@ def db(engine: Engine) -> Session:
     import shutil
     import stat
 
-    models = Path(get_settings().models_dir)
-    for child in models.iterdir():
-        for f in child.rglob("*"):
-            os.chmod(f, stat.S_IWUSR | stat.S_IRUSR)
-        shutil.rmtree(child)
+    settings = get_settings()
+    # Model artifacts and stored sea-ice grids are written read-only, so they are
+    # chmod'ed before removal. Both directories are temp dirs (see the header).
+    for root in (Path(settings.models_dir), Path(settings.seaice_data_dir)):
+        if not root.exists():
+            continue
+        for child in root.iterdir():
+            for f in child.rglob("*"):
+                if f.is_file():
+                    os.chmod(f, stat.S_IWUSR | stat.S_IRUSR)
+            shutil.rmtree(child) if child.is_dir() else child.unlink()
     with Session(engine, expire_on_commit=False) as session:
         yield session
 

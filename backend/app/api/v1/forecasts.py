@@ -10,6 +10,7 @@ from app.api.serializers import forecast_set_out
 from app.repositories import queries
 from app.schemas.common import Page
 from app.schemas.ml import ForecastRow, ForecastSetOut
+from ml.versioning.version_manager import FAMILY_TRAJECTORY
 
 router = APIRouter(prefix="/forecasts", tags=["forecasts"])
 
@@ -26,7 +27,8 @@ async def latest(
     if active_only:
         ids = [r[0].iceberg_id for r in (await session.execute(queries.iceberg_listing("current", None))).all()]
     rows = await queries.forecast_sets_with_points(session, horizon, ids, model_version)
-    champion = await queries.deployed_model(session)
+    # This endpoint serves iceberg trajectory forecasts: resolve the TRAJECTORY champion.
+    champion = await queries.deployed_model(session, FAMILY_TRAJECTORY)
     cv = champion.version if champion else None
     return [forecast_set_out(fs, pts, anchor, horizon, cv, settings.stale_after_days) for fs, pts, anchor in rows]
 

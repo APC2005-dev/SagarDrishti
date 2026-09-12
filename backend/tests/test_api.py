@@ -142,3 +142,86 @@ async def test_openapi_documents_error_responses(client) -> None:  # type: ignor
     op = spec["paths"]["/api/v1/icebergs/{iceberg_id}/forecast"]["get"]
     assert "404" in op["responses"] and "422" in op["responses"]
     assert any(p["name"] == "horizon" for p in op["parameters"])
+
+
+# ------------------------------------------------- two core families at once
+@pytest.fixture
+def both_families(seeded, settings):  # type: ignore[no-untyped-def]
+    """Trajectory AND sea-ice each deployed — the state that used to 500.
+
+    ``deployed`` is unique per family, not globally, so this is a valid state:
+    it must not raise MultipleResultsFound anywhere.
+    """
+    from app.services.seaice_registry import SeaIceRegistry
+    from tests.helpers import write_tiny_seaice_base
+
+    write_tiny_seaice_base(Path(settings.models_dir))
+    registry = SeaIceRegistry(seeded, settings)
+    registry.register_base()
+    registry.ensure_champion()
+    seeded.commit()
+    return seeded
+
+
+async def test_endpoints_survive_two_deployed_families(both_families, client) -> None:  # type: ignore[no-untyped-def]
+    """TEST 1 / 11 / 12: no MultipleResultsFound once a second family is deployed."""
+    for path in ("/api/v1/health/ready", "/api/v1/overview", "/api/v1/forecasts/latest?horizon=7",
+                 "/api/v1/models/current", "/api/v1/models", "/api/v1/models/lineage", "/api/v1/feeds"):
+        response = await client.get(path)
+        assert response.status_code == 200, f"{path} -> {response.status_code}: {response.text[:300]}"
+
+
+async def test_health_reports_each_family_separately(both_families, client) -> None:  # type: ignore[no-untyped-def]
+    checks = (await client.get("/api/v1/health/ready")).json()["checks"]
+    assert checks["model:trajectory"]["version"] == "v1"
+    assert checks["model:sea_ice"]["version"] == "sea_ice/base"
+    assert checks["model:trajectory"]["ok"] and checks["model:sea_ice"]["ok"]
+
+
+async def test_champion_is_resolved_per_family(both_families, client) -> None:  # type: ignore[no-untyped-def]
+    """TEST 3 / 4: each family resolves to its OWN model, never the other's."""
+    trajectory = (await client.get("/api/v1/models/current?family=trajectory")).json()
+    seaice = (await client.get("/api/v1/models/current?family=sea_ice")).json()
+    assert trajectory["version"] == "v1" and trajectory["architecture"] == "GRU"
+    assert seaice["version"] == "sea_ice/base" and seaice["architecture"] == "UNetResidual"
+    # The default (no family) is the trajectory product, unchanged for existing clients.
+    assert (await client.get("/api/v1/models/current")).json()["version"] == "v1"
+
+    champions = (await client.get("/api/v1/models/champions")).json()
+    assert set(champions) == {"trajectory", "sea_ice"}
+    assert champions["sea_ice"]["version"] == "sea_ice/base"
+
+
+async def test_model_listings_do_not_mix_families(both_families, client) -> None:  # type: ignore[no-untyped-def]
+    trajectory = (await client.get("/api/v1/models?family=trajectory")).json()
+    seaice = (await client.get("/api/v1/models?family=sea_ice")).json()
+    assert {m["version"] for m in trajectory} == {"base", "v1"}
+    assert all(m["version"].startswith("sea_ice/") for m in seaice)
+
+
+async def test_seaice_endpoints(both_families, client) -> None:  # type: ignore[no-untyped-def]
+    """TEST 9 / 10: the sea-ice API resolves the sea-ice champion, not the GRU."""
+    status = (await client.get("/api/v1/sea-ice/status")).json()
+    assert status["model"]["version"] == "sea_ice/base"
+    assert status["model"]["architecture"] == "UNetResidual"
+    assert status["model"]["inputWindowEntries"] == 7  # entries, not calendar days
+    assert status["datasetId"] == "osisaf_obs-si_glo_phy-sic-south_nrt_amsr2_l4_P1D-m"
+    # No sea-ice data in this fixture: the reason is explicit, no fake values.
+    assert status["observationCount"] == 0
+    assert status["windowComplete"] is False
+    assert "7 chronological entries" in status["forecastUnavailableReason"]
+    assert status["latestForecasts"] == []
+    assert (await client.get("/api/v1/sea-ice/latest")).status_code == 404
+    assert (await client.get("/api/v1/sea-ice/forecast?horizon=7")).status_code == 404
+    assert (await client.get("/api/v1/sea-ice/model")).json()["version"] == "sea_ice/base"
+
+
+async def test_feeds_lists_seaice_as_a_core_feed(both_families, client) -> None:  # type: ignore[no-untyped-def]
+    """TEST 6 / 24: the sea-ice source is a CORE feed with the notebook's dataset."""
+    feeds = {f["id"]: f for f in (await client.get("/api/v1/feeds")).json()}
+    seaice = feeds["copernicus_seaice_osisaf"]
+    assert seaice["category"] == "sea_ice"  # core, not "environmental"
+    assert seaice["sourceUrl"] == "osisaf_obs-si_glo_phy-sic-south_nrt_amsr2_l4_P1D-m"
+    assert feeds["usnic_antarctic_icebergs"]["category"] == "iceberg"
+    # The environmental sea-ice FEATURE provider is a separate, distinct entry.
+    assert feeds["env_operational_sea_ice"]["category"] == "environmental"

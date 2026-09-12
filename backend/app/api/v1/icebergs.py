@@ -16,6 +16,7 @@ from app.schemas.common import ERROR_RESPONSES, Page
 from app.schemas.environment import EnvGroupValue, IcebergEnvironment, VectorSummary
 from app.schemas.ml import EvaluationOut, ForecastSetOut
 from app.schemas.tracking import IcebergDetail, IcebergSummary, NearbyObservation, ObservationOut
+from ml.versioning.version_manager import FAMILY_TRAJECTORY
 
 router = APIRouter(prefix="/icebergs", tags=["icebergs"])
 StatusFilter = Literal["current", "official", "active", "not_in_latest_source", "historical_only", "all"]
@@ -121,7 +122,8 @@ async def forecast(
     rows = await queries.forecast_sets_with_points(session, horizon, [iceberg_id], model_version, with_inputs=True)
     if not rows:
         raise HTTPException(404, f"no forecast for {iceberg_id}")
-    champion = await queries.deployed_model(session)
+    # This endpoint serves iceberg trajectory forecasts: resolve the TRAJECTORY champion.
+    champion = await queries.deployed_model(session, FAMILY_TRAJECTORY)
     fs, points, anchor = rows[0]
     return forecast_set_out(fs, points, anchor, horizon, champion.version if champion else None, settings.stale_after_days, with_inputs=True)
 

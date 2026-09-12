@@ -221,6 +221,79 @@ p90 per horizon) are computed in SQL. With a weekly source most matches are D+7.
 * Every transition is an `ml.model_status_events` row; lineage is
   `GET /api/v1/models/lineage`.
 
+## Sea-ice model (U-Net Residual v4)
+
+A **core model in its own right**, alongside the iceberg trajectory GRU — not an
+environmental feature. It has its own artifacts, its own schema and its own
+version lineage.
+
+* **Base** `models/sea_ice/base/unet_residual_v4_best.pt` — the supplied PyTorch
+  `state_dict` (483,939 parameters). Registered as `sea_ice/base`, status
+  `validated`, never served directly and never written to.
+* **Source** Copernicus Marine `osisaf_obs-si_glo_phy-sic-south_nrt_amsr2_l4_P1D-m`
+  (EUMETSAT OSI SAF AMSR2 L4, daily, Southern Hemisphere) — the same product the
+  base model was trained on. `ice_conc` (%) ÷ 100 → fraction, coarsened 5× by
+  mean (`boundary="trim"`) from 500×3600 at 0.1° to **100×720 at 0.5°**,
+  EPSG:4326. NaN → 0 with a validity mask carried as its own channels.
+* **Input** `(16, 100, 720)` = 7 concentration entries + 7 validity masks +
+  day-of-year sin/cos. **The window is the LAST 7 CHRONOLOGICAL DATABASE
+  ENTRIES, not the previous 7 calendar days**; gaps in the official source are
+  preserved and never padded with invented days. (The trajectory model's
+  14-entry rule is the same principle at a different length and is unrelated.)
+* **Output** `(3, 100, 720)` residuals for D+1/D+3/D+7; the forecast is
+  `clamp(persistence + delta, 0, 1)` where persistence is the last entry.
+* **Ingestion** polled every `SEAICE_POLL_INTERVAL_HOURS` (≈3 days). Polling
+  *checks* the source; it does not imply new data exists and **never creates a
+  model version**. A date already stored is skipped (unique constraint +
+  append-only trigger); history is never deleted.
+* **Retraining** gated by `SEAICE_RETRAIN_MIN_NEW_OBSERVATIONS`,
+  `…_MIN_DAYS_SINCE_LAST_TRAINING` and a configurable degradation trigger
+  (`SEAICE_DEGRADATION_MAX_RMSE` / `…_RELATIVE_TOLERANCE`, over
+  `…_MIN_SAMPLES` stored evaluations). Only then is a candidate trained.
+* **Champion/challenger** both scored on identical held-out samples with the
+  same masked RMSE/MAE. Promotion needs
+  `SEAICE_PROMOTION_MIN_RELATIVE_IMPROVEMENT` at D+7 without breaching
+  `…_MAX_SHORT_HORIZON_REGRESSION` at D+1. Rejected candidates are registered
+  and kept for lineage and rollback.
+
+### Independent version lineages
+
+`ml.model_versions.model_family` scopes the lineage. Version numbers are unique
+**per family** and there is one `deployed` champion **per family**, so
+trajectory `v4` and sea-ice `v4` are unrelated models that merely share a
+number. Sea-ice rows are stored under a qualified key (`sea_ice/v1`) so every
+existing foreign key to `version` stays valid; `ModelVersion.short_version`
+gives the family-local name. As everywhere else, **the champion is whichever
+version is `deployed`, not the highest number.**
+
+### Loading history
+
+`load-historical` covers **both** core models in one command — the BYU iceberg
+dataset and the official sea-ice record:
+
+```bash
+dev load-historical                    # icebergs + sea-ice history
+dev load-historical --skip-seaice      # icebergs only
+```
+
+The sea-ice half backfills from `SEAICE_HISTORICAL_START` (default `2024-09-01`,
+the period the base model was trained on) up to the latest published day. It is
+not limited by the 3-day poller's `SEAICE_MAX_ENTRIES_PER_RUN` cap, skips days
+already stored, and never rewrites or deletes history, so it is safe to re-run.
+Days are fetched in contiguous chunks of `SEAICE_FETCH_CHUNK_SIZE`, which is
+~25× faster than one request per day. A sea-ice failure (missing credentials,
+service down) is reported but never loses the iceberg load.
+
+```bash
+dev seaice-register-base && dev seaice-bootstrap   # or: python -m app.cli seaice-...
+python -m app.cli seaice-load-historical --since 2023-03-23   # go further back
+python -m app.cli seaice-ingest        # poll Copernicus Marine
+python -m app.cli seaice-forecast      # forecast from the champion
+python -m app.cli seaice-evaluate      # score forecasts vs official data
+python -m app.cli seaice-retrain       # policy-gated; --force to bypass eligibility
+python -m app.cli seaice-status
+```
+
 ## Environmental-feature models (wind · ocean current · sea ice)
 
 Starting with versions after v1, retraining can create **environmental model versions** that add per-entry

@@ -106,6 +106,48 @@ class Settings(BaseSettings):
     historical_train_end: date = date(2018, 8, 23)
     historical_validation_end: date = date(2022, 3, 9)
 
+    # --- sea-ice model (independent core model, own lineage) -------------------
+    # The sea-ice model is a first-class core model, NOT an environmental feature.
+    # Its input window is 7 chronological database entries (see ml.seaice.constants).
+    seaice_enabled: bool = True
+    seaice_dataset_id: str = "osisaf_obs-si_glo_phy-sic-south_nrt_amsr2_l4_P1D-m"
+    seaice_data_dir: Path = REPO_ROOT / "data" / "processed" / "seaice"
+    # The scheduler CHECKS this often; it does not mean a new entry exists each
+    # time, and it never by itself creates a model version.
+    seaice_poll_interval_hours: float = 72.0
+    seaice_initial_backfill_days: int = 120
+    seaice_max_entries_per_run: int = 40
+    # Historical backfill (``load-historical``). The default start matches the
+    # period the base model was trained on (notebook: 2024-09-01 .. 2026-08-25);
+    # the source itself reaches further back, so lower this to load more.
+    seaice_historical_start: date = date(2024, 9, 1)
+    seaice_historical_max_entries: int | None = None  # None = no cap for a one-off backfill
+    # Contiguous days fetched per read. One-day-at-a-time costs a round trip per
+    # day (~16s); a chunked slice amortises it (~0.65s/day measured).
+    seaice_fetch_chunk_size: int = 20
+    # Retraining eligibility.
+    seaice_retrain_min_new_observations: int = 30
+    seaice_retrain_min_days_since_last_training: float = 30.0
+    seaice_retrain_min_evaluations: int = 10
+    # Performance-degradation trigger, measured on stored operational evaluations.
+    seaice_degradation_horizon_days: int = 7
+    seaice_degradation_max_rmse: float | None = None
+    seaice_degradation_relative_tolerance: float | None = 0.20
+    seaice_degradation_min_samples: int = 10
+    # Candidate training.
+    seaice_retrain_epochs: int = 30
+    seaice_retrain_learning_rate: float = 1e-4
+    seaice_retrain_batch_size: int = 8
+    seaice_retrain_patience: int = 5
+    seaice_retrain_validation_fraction: float = 0.2
+    seaice_retrain_seed: int = 42
+    # Promotion policy: a candidate must beat the champion by this margin on the
+    # primary horizon, and must not regress the short horizon beyond the cap.
+    seaice_promotion_primary_horizon: int = 7
+    seaice_promotion_min_relative_improvement: float = 0.02
+    seaice_promotion_max_short_horizon_regression: float = 0.05
+    seaice_promotion_min_evaluation_samples: int = 5
+
     promotion_primary_horizon: int = 7
     promotion_min_relative_improvement: float = 0.02
     promotion_max_short_horizon_regression: float = 0.05

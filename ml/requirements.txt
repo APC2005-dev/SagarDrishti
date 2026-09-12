@@ -1,5 +1,7 @@
 # Pure ML stack (no database / web dependencies).
-# The base artifact was saved by Keras 3 (TensorFlow >= 2.16) in Colab.
+# Two core models, two frameworks:
+#  * iceberg trajectory (GRU) - Keras 3 / TensorFlow >= 2.16, base artifact saved in Colab
+#  * sea ice (U-Net Residual v4) - PyTorch, base artifact is a state_dict saved in Colab
 numpy>=1.26,<3
 pandas>=2.2,<3
 pyproj>=3.6
@@ -7,3 +9,7 @@ scikit-learn>=1.4
 joblib>=1.4
 tensorflow>=2.16,<2.21 ; platform_system != "Linux"
 tensorflow-cpu>=2.16,<2.21 ; platform_system == "Linux"
+# Sea-ice model. CPU build is sufficient: inference and fine-tuning run on a
+# 100x720 grid. Install from https://download.pytorch.org/whl/cpu for the
+# CPU-only wheel.
+torch>=2.4,<3

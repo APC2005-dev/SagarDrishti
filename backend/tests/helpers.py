@@ -72,3 +72,51 @@ def document(content: bytes | str, fetched_at: datetime | None = None) -> Fetche
 
 def csv_rows(*rows: str) -> str:
     return HEADER + "\n" + "\n".join(rows) + "\n"
+
+
+def write_tiny_seaice_base(models_dir: Path) -> None:
+    """A randomly-initialised U-Net Residual v4 saved in the sea-ice base layout.
+
+    Same architecture and tensor contract as the supplied artifact, so the
+    loader and registry are exercised for real; the weights are meaningless and
+    it is never the production model.
+    """
+    import json as _json
+
+    import torch
+
+    from ml.adapters.bootstrap_adapter import sha256_file
+    from ml.seaice.architecture import build_model
+    from ml.seaice.constants import (
+        BASE_ARTIFACT_FILENAME,
+        CHANNEL_LAYOUT,
+        GRID_SHAPE,
+        HORIZONS,
+        WINDOW,
+    )
+
+    base = Path(models_dir) / "sea_ice" / "base"
+    base.mkdir(parents=True, exist_ok=True)
+    torch.manual_seed(0)
+    torch.save(build_model().state_dict(), base / BASE_ARTIFACT_FILENAME)
+    metadata = {
+        "model_family": "sea_ice",
+        "version": "base",
+        "parent_version": None,
+        "architecture": "UNetResidual",
+        "architecture_version": "unet_residual_v4",
+        "artifact_origin": "test_fixture",
+        "input_semantics": "chronological_observation_entries",
+        "input_window_entries": WINDOW,
+        "channel_layout": list(CHANNEL_LAYOUT),
+        "forecast_horizons_days": list(HORIZONS),
+        "preprocessing": {"grid_shape": list(GRID_SHAPE)},
+        "training_data_cutoff": "2026-08-25",
+        "metrics": {"protocol": "historical_test", "by_horizon": {
+            "1": {"rmse": 0.04164, "mae": 0.01434},
+            "3": {"rmse": 0.07232, "mae": 0.02546},
+            "7": {"rmse": 0.09699, "mae": 0.03507},
+        }},
+        "artifact_sha256": {BASE_ARTIFACT_FILENAME: sha256_file(base / BASE_ARTIFACT_FILENAME)},
+    }
+    (base / "metadata.json").write_text(_json.dumps(metadata, indent=2))

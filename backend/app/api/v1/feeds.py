@@ -45,7 +45,75 @@ async def feeds(session: SessionDep, settings: SettingsDep) -> list[FeedOut]:
             discovery_method=latest.discovery_method if latest else None,
             error_message=latest.error_message if latest else None,
         ),
+        *_seaice_feed(settings),
         *_environmental_feeds(settings),
+    ]
+
+
+def _seaice_feed(settings) -> list[FeedOut]:  # type: ignore[no-untyped-def]
+    """The sea-ice CORE feed: the exact Copernicus Marine product the sea-ice
+    model was trained on. Distinct from the environmental ``sea_ice`` feature
+    provider below, which samples a different (model) product per iceberg."""
+    from sqlalchemy import func, select
+    from sqlalchemy.orm import Session
+
+    from app.db.session import sync_engine
+    from app.models.seaice import SeaIceObservation, SeaIceRun
+    from ml.seaice.constants import AUTHORITY, DATASET_ID, VARIABLE
+
+    if not settings.seaice_enabled:
+        return []
+    with Session(sync_engine()) as session:
+        latest = session.execute(
+            select(SeaIceRun).where(SeaIceRun.kind == "ingestion")
+            .order_by(SeaIceRun.started_at.desc()).limit(1)
+        ).scalar_one_or_none()
+        ok_at = session.execute(
+            select(func.max(SeaIceRun.completed_at)).where(
+                SeaIceRun.kind == "ingestion", SeaIceRun.status.in_(("success", "unchanged"))
+            )
+        ).scalar()
+        count, newest = session.execute(
+            select(func.count(), func.max(SeaIceObservation.observation_date)).select_from(SeaIceObservation)
+        ).one()
+        from app.services.seaice_ingestion_service import SeaIceIngestionService
+
+        configured, reason = SeaIceIngestionService(session, settings).source.is_configured()
+
+    state, reasons = feed_state(
+        latest.status if latest else None,
+        latest.entries_new if latest else 0,
+        ok_at, newest, settings.feed_degraded_after_hours, settings.stale_after_days,
+    )
+    if not configured:
+        state, reasons = "UNKNOWN", [reason]
+    return [
+        FeedOut(
+            id="copernicus_seaice_osisaf",
+            name="Copernicus Marine / OSI SAF Antarctic Sea-Ice Concentration",
+            provider=AUTHORITY,
+            description=(
+                f"Official daily sea-ice concentration ({VARIABLE}, %) on a 0.1 deg grid, coarsened 5x to "
+                f"0.5 deg (100x720). The exact product the sea-ice U-Net was trained on. Polled every "
+                f"{settings.seaice_poll_interval_hours:.0f} h; a day already stored is never re-ingested."
+            ),
+            product_url="https://data.marine.copernicus.eu/product/SEAICE_GLO_SEAICE_L4_NRT_OBSERVATIONS_011_001",
+            source_url=DATASET_ID,
+            cadence="P1D native, daily values; latency ~1-2 d",
+            poll_interval_hours=settings.seaice_poll_interval_hours,
+            state=state,
+            state_reasons=reasons,
+            last_fetch_at=latest.started_at if latest else None,
+            last_success_at=ok_at,
+            latest_official_observation_date=newest,
+            fetch_duration_ms=latest.duration_ms if latest else None,
+            checksum_sha256=None,  # per-day grids are checksummed individually, not the feed as a whole
+            record_count=int(count),
+            discovery_method="configured dataset_id",
+            error_message=latest.error_message if latest else None,
+            category="sea_ice",
+            configured=configured,
+        )
     ]
 
 
