@@ -1,5 +1,5 @@
 import { useEnvironmentRuns, useEnvironmentStatus } from '../../hooks/queries';
-import { fmtDate, fmtDateTime, fmtNum, relTime } from '../../utils/format';
+import { fmtDate, fmtDateTime, fmtNum } from '../../utils/format';
 import { SectionTitle } from '../common/Metric';
 import { QueryState } from '../common/QueryState';
 import { Chip, RunStatusChip } from '../common/StatusChip';

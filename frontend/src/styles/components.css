@@ -41,12 +41,14 @@
   z-index: var(--overlay-z);
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .brand {
   display: flex;
   align-items: baseline;
   gap: 10px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .brand-mark {
   color: var(--official);
@@ -66,7 +68,12 @@
   display: flex;
   gap: 2px;
   height: 100%;
-  overflow-x: auto;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav::-webkit-scrollbar {
+  display: none;
 }
 .nav-link {
   position: relative;
@@ -89,7 +96,7 @@
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: -1px;
+  bottom: 0;
   height: 2px;
   background: var(--accent);
 }
