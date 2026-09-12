@@ -1,7 +1,10 @@
 import { SectionTitle } from '../../components/common/Metric';
+import { QueryState } from '../../components/common/QueryState';
+import { ResizeHandle } from '../../components/common/ResizeHandle';
 import { Chip } from '../../components/common/StatusChip';
 import { AntarcticScene } from '../../components/globe/AntarcticScene';
 import { useIcebergs, useLatestForecasts } from '../../hooks/queries';
+import { useResizableSidebar } from '../../hooks/useResizableSidebar';
 
 /**
  * Structure for a future routing engine. The inputs it will consume are
@@ -19,9 +22,16 @@ const INPUTS = [
 export default function RoutePlanningPage() {
   const icebergs = useIcebergs();
   const forecasts = useLatestForecasts();
+
+  const { sidebarWidth, isDragging, startResize, resetWidth } = useResizableSidebar({
+    storageKey: 'sagar_sidebar_width_route_planning',
+    defaultWidth: 420,
+    minWidth: 320,
+  });
+
   return (
-    <div className="split narrow">
-      <section className="split-left scroll pad">
+    <div className="split-resizable" style={{ gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}>
+      <section className="split-left scroll pad" aria-label="Route planning inputs">
         <div className="page-head">
           <h1>Route planning</h1>
         </div>
@@ -42,7 +52,14 @@ export default function RoutePlanningPage() {
           ))}
         </div>
       </section>
-      <section className="split-right">
+      <ResizeHandle
+        width={sidebarWidth}
+        isDragging={isDragging}
+        onPointerDown={startResize}
+        onDoubleClick={resetWidth}
+        label="Resize route planning sidebar"
+      />
+      <section className="split-right" aria-label="Route planning map">
         <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={7} riskMode="all" showHistory={false} />
       </section>
     </div>

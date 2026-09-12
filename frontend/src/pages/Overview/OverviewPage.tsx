@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 
-import { OVERVIEW_WIDGETS } from '../../components/dashboard/widgets';
 import { SectionTitle } from '../../components/common/Metric';
 import { QueryState } from '../../components/common/QueryState';
+import { ResizeHandle } from '../../components/common/ResizeHandle';
+import { OVERVIEW_WIDGETS } from '../../components/dashboard/widgets';
 import { AntarcticScene } from '../../components/globe/AntarcticScene';
 import { useIcebergs, useLatestForecasts, useOverview } from '../../hooks/queries';
+import { useResizableSidebar } from '../../hooks/useResizableSidebar';
 import { fmtDateTime } from '../../utils/format';
 
 export default function OverviewPage() {
@@ -12,8 +14,14 @@ export default function OverviewPage() {
   const icebergs = useIcebergs();
   const forecasts = useLatestForecasts();
 
+  const { sidebarWidth, isDragging, startResize, resetWidth } = useResizableSidebar({
+    storageKey: 'sagar_sidebar_width_overview',
+    defaultWidth: 520,
+    minWidth: 380,
+  });
+
   return (
-    <div className="split" style={{ gridTemplateColumns: 'minmax(460px, 560px) 1fr' }}>
+    <div className="split-resizable" style={{ gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}>
       <section className="split-left scroll pad" aria-label="Mission summary">
         <div className="page-head">
           <div>
@@ -41,6 +49,13 @@ export default function OverviewPage() {
           )}
         </QueryState>
       </section>
+      <ResizeHandle
+        width={sidebarWidth}
+        isDragging={isDragging}
+        onPointerDown={startResize}
+        onDoubleClick={resetWidth}
+        label="Resize overview sidebar"
+      />
       <section className="split-right" aria-label="Antarctic situation map">
         <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={7} />
         {(icebergs.isError || forecasts.isError) && (

@@ -2,11 +2,13 @@ import { AnimatePresence } from 'framer-motion';
 import { useDeferredValue, useMemo, useState } from 'react';
 
 import { QueryState } from '../../components/common/QueryState';
+import { ResizeHandle } from '../../components/common/ResizeHandle';
 import { HorizonSelector } from '../../components/forecast/HorizonSelector';
 import { AntarcticScene } from '../../components/globe/AntarcticScene';
 import { IcebergDetailPanel } from '../../components/iceberg/IcebergDetailPanel';
 import { IcebergTable } from '../../components/iceberg/IcebergTable';
 import { useIcebergs, useLatestForecasts } from '../../hooks/queries';
+import { useResizableSidebar } from '../../hooks/useResizableSidebar';
 import { useUi } from '../../stores/uiStore';
 
 export default function IcebergsPage() {
@@ -20,6 +22,12 @@ export default function IcebergsPage() {
   const [filter, setFilter] = useState('');
   const q = useDeferredValue(filter.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
 
+  const { sidebarWidth, isDragging, startResize, resetWidth } = useResizableSidebar({
+    storageKey: 'sagar_sidebar_width_icebergs',
+    defaultWidth: 540,
+    minWidth: 320,
+  });
+
   const rows = useMemo(() => (icebergs.data?.items ?? []).filter((b) => !q || b.icebergId.includes(q)), [icebergs.data, q]);
   const stats = useMemo(() => {
     const items = icebergs.data?.items ?? [];
@@ -27,7 +35,7 @@ export default function IcebergsPage() {
   }, [icebergs.data]);
 
   return (
-    <div className="split">
+    <div className="split-resizable" style={{ gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}>
       <section className="split-left" aria-label="Tracked icebergs">
         <div className="toolbar">
           <input
@@ -49,6 +57,13 @@ export default function IcebergsPage() {
           {() => <IcebergTable rows={rows} />}
         </QueryState>
       </section>
+      <ResizeHandle
+        width={sidebarWidth}
+        isDragging={isDragging}
+        onPointerDown={startResize}
+        onDoubleClick={resetWidth}
+        label="Resize icebergs sidebar"
+      />
       <section className="split-right" aria-label="Map">
         <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={horizon}>
           <div className="map-overlay map-controls">

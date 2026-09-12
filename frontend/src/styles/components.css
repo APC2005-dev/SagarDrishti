@@ -351,6 +351,43 @@
   grid-template-columns: minmax(420px, 46%) 1fr;
   height: 100%;
 }
+.split-resizable {
+  display: grid;
+  height: 100%;
+  position: relative;
+}
+.resize-handle {
+  width: 6px;
+  background: var(--bg-2);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  cursor: col-resize;
+  position: relative;
+  user-select: none;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  z-index: 10;
+}
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: var(--official);
+}
+.resize-handle-bar {
+  width: 2px;
+  height: 32px;
+  border-radius: 1px;
+  background: var(--text-3);
+  transition: background 0.15s ease, height 0.15s ease;
+}
+.resize-handle:hover .resize-handle-bar,
+.resize-handle.dragging .resize-handle-bar {
+  background: var(--official);
+  height: 48px;
+}
 .split.narrow {
   grid-template-columns: minmax(360px, 380px) 1fr;
 }
