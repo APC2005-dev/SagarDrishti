@@ -29,10 +29,6 @@ function atHorizon(f: ForecastSet, h: number) {
   };
 }
 
-/**
- * 1-, 3- and 7-day views are one page parameterised by the route; the scene
- * stays mounted and animates between horizons of the same model run.
- */
 export default function ForecastPage() {
   const { horizon: param = '7d' } = useParams();
   const horizon = PARAM_TO_H[param];
@@ -44,12 +40,20 @@ export default function ForecastPage() {
   const forecasts = useLatestForecasts();
   const models = useModels();
 
-  const { sidebarWidth, sidebarHeight, isDragging, isMobile, startResize, resetSize } =
-    useResizableSidebar({
-      storageKey: 'sagar_sidebar_forecast',
-      defaultWidth: 440,
-      minWidth: 320,
-    });
+  const {
+    sidebarWidth,
+    sidebarHeight,
+    isDragging,
+    isMobile,
+    layoutMode,
+    setLayoutMode,
+    startResize,
+    resetSize,
+  } = useResizableSidebar({
+    storageKey: 'sagar_sidebar_forecast',
+    defaultWidth: 440,
+    minWidth: 320,
+  });
 
   useEffect(() => {
     if (horizon) setHorizon(horizon);
@@ -77,109 +81,174 @@ export default function ForecastPage() {
       style={
         isMobile
           ? undefined
-          : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }
+          : { gridTemplateColumns: `${sidebarWidth}px 8px 1fr` }
       }
     >
-      <section
-        className="split-left scroll pad"
-        aria-label="Forecast summary"
-        style={isMobile ? { height: `${sidebarHeight}px`, flexShrink: 0 } : undefined}
-      >
-        <div className="page-head">
-          <div>
-            <span className="label">Trajectory forecast</span>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.h1
-                key={horizon}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.18 }}
-              >
-                {horizon}-day view · D+1…D+{horizon}
-              </motion.h1>
-            </AnimatePresence>
-          </div>
-        </div>
-        <HorizonSelector value={horizon} onChange={(h) => navigate(HORIZON_ROUTES[h])} />
-        <div className="note" style={{ marginTop: 12 }}>
-          One GRU inference per iceberg produces D+1…D+7. The 1/3/7-day views filter that same run — they are not separate
-          models. Forecast points are predictions, never observations.
-        </div>
-
-        <SectionTitle>Model</SectionTitle>
-        <div className="kv-grid">
-          <KV k="Champion" v={champion ? `${champion.version} · ${champion.architectureVersion}` : 'none deployed'} />
-          <KV k="Feature schema" v={champion ? `${champion.featureSchemaVersion} (${champion.modelType})` : '—'} />
-          <KV k="Versions in view" v={versions.join(', ') || '—'} />
-          <KV k="Issued" v={issued ? fmtDateTime(issued.last) : '—'} />
-          <KV
-            k={`Benchmark D+${horizon} MAE`}
-            v={fmtKm(champion ? (horizon === 1 ? champion.day1Error : horizon === 3 ? champion.day3Error : champion.day7Error) : null)}
-          />
-        </div>
-
-        <SectionTitle right={<span className="mono dim">{rows.length} sets</span>}>
-          Forecasts at D+{horizon}
-        </SectionTitle>
-        <QueryState
-          query={forecasts}
-          empty={(d) => d.length === 0}
-          emptyText="No forecasts available. Forecasts are generated after each ingestion when a model is deployed."
+      {/* Sidebar summary panel */}
+      {(!isMobile || layoutMode !== 'map') && (
+        <section
+          className="split-left scroll pad"
+          aria-label="Forecast summary"
+          style={
+            isMobile
+              ? {
+                  height: layoutMode === 'content' ? '100%' : `${sidebarHeight}px`,
+                  flexShrink: 0,
+                }
+              : undefined
+          }
         >
-          {() => (
-            <div className="table-wrap">
-              <table className="data clickable">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>FROM FIX</th>
-                    <th className="num">MOVE</th>
-                    <th className="num">BRG</th>
-                    <th className="num">P90</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(({ f, h }) => (
-                    <tr
-                      key={f.forecastSetId}
-                      className={f.icebergId === selected ? 'selected' : undefined}
-                      onClick={() => select(f.icebergId === selected ? null : f.icebergId)}
-                    >
-                      <td className="designator">{f.icebergId}</td>
-                      <td className="mono muted">{fmtDate(f.latestObservationDate)}</td>
-                      <td className="mono num">{fmtKm(h?.km)}</td>
-                      <td className="mono num muted">{h ? `${h.bearing.toFixed(0)}°` : '—'}</td>
-                      <td className="mono num muted">{fmtKm(h?.point.riskRadiusKmP90)}</td>
-                      <td>{f.isStale ? <StaleChip /> : <Chip tone="forecast">{f.modelVersion}</Chip>}</td>
+          <div className="page-head">
+            <div>
+              <span className="label">Trajectory forecast</span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.h1
+                  key={horizon}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {horizon}-day view · D+1…D+{horizon}
+                </motion.h1>
+              </AnimatePresence>
+            </div>
+
+            {isMobile && (
+              <div className="mobile-view-toggle">
+                <button
+                  type="button"
+                  className={`mobile-view-btn${layoutMode === 'content' ? ' active' : ''}`}
+                  onClick={() => setLayoutMode('content')}
+                >
+                  📋 List
+                </button>
+                <button
+                  type="button"
+                  className={`mobile-view-btn${layoutMode === 'split' ? ' active' : ''}`}
+                  onClick={() => setLayoutMode('split')}
+                >
+                  ◫ Split
+                </button>
+                <button
+                  type="button"
+                  className={`mobile-view-btn${layoutMode === 'map' ? ' active' : ''}`}
+                  onClick={() => setLayoutMode('map')}
+                >
+                  🌐 Map
+                </button>
+              </div>
+            )}
+          </div>
+
+          <HorizonSelector value={horizon} onChange={(h) => navigate(HORIZON_ROUTES[h])} />
+          <div className="note" style={{ marginTop: 12 }}>
+            One GRU inference per iceberg produces D+1…D+7. The 1/3/7-day views filter that same run — they are not separate
+            models. Forecast points are predictions, never observations.
+          </div>
+
+          <SectionTitle>Model</SectionTitle>
+          <div className="kv-grid">
+            <KV k="Champion" v={champion ? `${champion.version} · ${champion.architectureVersion}` : 'none deployed'} />
+            <KV k="Feature schema" v={champion ? `${champion.featureSchemaVersion} (${champion.modelType})` : '—'} />
+            <KV k="Versions in view" v={versions.join(', ') || '—'} />
+            <KV k="Issued" v={issued ? fmtDateTime(issued.last) : '—'} />
+            <KV
+              k={`Benchmark D+${horizon} MAE`}
+              v={fmtKm(champion ? (horizon === 1 ? champion.day1Error : horizon === 3 ? champion.day3Error : champion.day7Error) : null)}
+            />
+          </div>
+
+          <SectionTitle right={<span className="mono dim">{rows.length} sets</span>}>
+            Forecasts at D+{horizon}
+          </SectionTitle>
+          <QueryState
+            query={forecasts}
+            empty={(d) => d.length === 0}
+            emptyText="No forecasts available. Forecasts are generated after each ingestion when a model is deployed."
+          >
+            {() => (
+              <div className="table-wrap">
+                <table className="data clickable">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>FROM FIX</th>
+                      <th className="num">MOVE</th>
+                      <th className="num">BRG</th>
+                      <th className="num">P90</th>
+                      <th />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.map(({ f, h }) => (
+                      <tr
+                        key={f.forecastSetId}
+                        className={f.icebergId === selected ? 'selected' : undefined}
+                        onClick={() => select(f.icebergId === selected ? null : f.icebergId)}
+                      >
+                        <td className="designator">{f.icebergId}</td>
+                        <td className="mono muted">{fmtDate(f.latestObservationDate)}</td>
+                        <td className="mono num">{fmtKm(h?.km)}</td>
+                        <td className="mono num muted">{h ? `${h.bearing.toFixed(0)}°` : '—'}</td>
+                        <td className="mono num muted">{fmtKm(h?.point.riskRadiusKmP90)}</td>
+                        <td>{f.isStale ? <StaleChip /> : <Chip tone="forecast">{f.modelVersion}</Chip>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </QueryState>
+        </section>
+      )}
+
+      {/* Resize Handle */}
+      {(!isMobile || layoutMode === 'split') && (
+        <ResizeHandle
+          width={sidebarWidth}
+          height={sidebarHeight}
+          isDragging={isDragging}
+          isMobile={isMobile}
+          layoutMode={layoutMode}
+          onLayoutModeChange={setLayoutMode}
+          onPointerDown={startResize}
+          onDoubleClick={resetSize}
+          label="Resize forecast split"
+        />
+      )}
+
+      {/* 3D Map panel */}
+      {(!isMobile || layoutMode !== 'content') && (
+        <section
+          className="split-right"
+          aria-label="Forecast map"
+          style={
+            isMobile
+              ? {
+                  flex: 1,
+                  minHeight: 0,
+                  height: layoutMode === 'map' ? '100%' : 'auto',
+                }
+              : undefined
+          }
+        >
+          {isMobile && layoutMode === 'map' && (
+            <div className="mobile-floating-toggle">
+              <button
+                type="button"
+                className="mobile-floating-btn"
+                onClick={() => setLayoutMode('split')}
+              >
+                ◫ Show Forecasts
+              </button>
             </div>
           )}
-        </QueryState>
-      </section>
 
-      <ResizeHandle
-        width={sidebarWidth}
-        height={sidebarHeight}
-        isDragging={isDragging}
-        isMobile={isMobile}
-        onPointerDown={startResize}
-        onDoubleClick={resetSize}
-        label="Resize forecast split"
-      />
-
-      <section
-        className="split-right"
-        aria-label="Forecast map"
-        style={isMobile ? { flex: 1, minHeight: 160 } : undefined}
-      >
-        <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={horizon} />
-        <AnimatePresence>{selected && <IcebergDetailPanel key={selected} icebergId={selected} />}</AnimatePresence>
-      </section>
+          <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={horizon} />
+          <AnimatePresence>{selected && <IcebergDetailPanel key={selected} icebergId={selected} />}</AnimatePresence>
+        </section>
+      )}
     </div>
   );
 }
