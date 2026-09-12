@@ -10,9 +10,6 @@ import { FeedStateChip } from '../common/StatusChip';
 const NAV = [
   { to: '/', label: 'Overview', end: true },
   { to: '/icebergs', label: 'Icebergs' },
-  { to: '/forecast/1d', label: '1-Day' },
-  { to: '/forecast/3d', label: '3-Day' },
-  { to: '/forecast/7d', label: '7-Day' },
   { to: '/operations', label: 'Operations' },
   { to: '/feeds', label: 'Feeds' },
   { to: '/route-planning', label: 'Route planning' },

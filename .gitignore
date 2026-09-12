@@ -33,3 +33,4 @@ models/.v*-*/
 
 # claude
 .claude/
+models/v1/

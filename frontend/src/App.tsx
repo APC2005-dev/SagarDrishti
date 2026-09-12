@@ -7,16 +7,10 @@ import { TopBar } from './components/navigation/TopBar';
 
 const Overview = lazy(() => import('./pages/Overview/OverviewPage'));
 const Icebergs = lazy(() => import('./pages/Icebergs/IcebergsPage'));
-const Forecast = lazy(() => import('./pages/Forecast/ForecastPage'));
 const Operations = lazy(() => import('./pages/Operations/OperationsPage'));
 const Feeds = lazy(() => import('./pages/Feeds/FeedsPage'));
 const RoutePlanning = lazy(() => import('./pages/RoutePlanning/RoutePlanningPage'));
 const SeaIce = lazy(() => import('./pages/SeaIceForecast/SeaIceForecastPage'));
-
-/** Top-level section key: forecast horizons share one key so switching 1/3/7 does not re-mount the page. */
-function sectionKey(pathname: string): string {
-  return pathname.startsWith('/forecast') ? '/forecast' : pathname;
-}
 
 export default function App() {
   const location = useLocation();
@@ -27,7 +21,7 @@ export default function App() {
       <main className="app-main">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={sectionKey(location.pathname)}
+            key={location.pathname}
             className="page-frame"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -38,8 +32,6 @@ export default function App() {
               <Routes location={location}>
                 <Route path="/" element={<Overview />} />
                 <Route path="/icebergs" element={<Icebergs />} />
-                <Route path="/forecast/:horizon" element={<Forecast />} />
-                <Route path="/forecast" element={<Navigate to="/forecast/7d" replace />} />
                 <Route path="/operations" element={<Operations />} />
                 <Route path="/feeds" element={<Feeds />} />
                 <Route path="/route-planning" element={<RoutePlanning />} />
