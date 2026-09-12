@@ -96,14 +96,6 @@ export function AntarcticScene({
   useEffect(() => {
     if (basemapInfo.data) ensureBasemap(basemapInfo.data);
   }, [basemapInfo.data]);
-  const basemapLabel =
-    basemap.status === 'ready' || basemap.status === 'partial'
-      ? `BASEMAP NASA BLUE MARBLE (STATIC COMPOSITE — NOT CURRENT CONDITIONS)${basemap.status === 'partial' ? ` · ${basemap.failedTiles} TILES MISSING` : ''}`
-      : basemap.status === 'loading' || basemap.status === 'idle'
-        ? 'BASEMAP LOADING…'
-        : basemap.status === 'disabled'
-          ? 'BASEMAP DISABLED'
-          : 'BASEMAP UNAVAILABLE — COASTLINE ONLY';
 
   const plottable = useMemo(
     () => icebergs.filter((b): b is PlottableIceberg => b.latitude != null && b.longitude != null),
@@ -143,10 +135,6 @@ export function AntarcticScene({
       <div className="map-overlay map-meta mono">
         <span>RENDER {CRS.render} · POLAR STEREOGRAPHIC (TRUE SCALE 71°S)</span>
         <span>DATA {CRS.data} · COASTLINE NATURAL EARTH 1:50m</span>
-        <span style={basemap.status === 'unavailable' ? { color: 'var(--warn)' } : undefined}>{basemapLabel}</span>
-        <span>
-          {plottable.length} OFFICIAL POSITIONS{forecasts.length ? ` · ${forecasts.length} FORECAST SETS · D+1…D+${horizon}` : ''}
-        </span>
         {landError && <span style={{ color: 'var(--warn)' }}>COASTLINE UNAVAILABLE: {landError}</span>}
         {envLabels.map((l) => (
           <span key={l}>{l} · ANALYSIS, COARSENED</span>
