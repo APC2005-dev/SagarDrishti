@@ -20,15 +20,20 @@ export function IcebergDetailPanel({ icebergId }: { icebergId: string }) {
   const evaluations = useIcebergEvaluations(icebergId);
   const history = useHistory(icebergId, true);
   const [showInputs, setShowInputs] = useState(false);
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
 
   const forecastMissing = forecast.isError && forecast.error instanceof ApiError && forecast.error.status === 404;
+
+  const panelVariants = isMobile
+    ? { initial: { opacity: 0, y: '100%' }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: '100%' } }
+    : { initial: { opacity: 0, x: 24 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 24 } };
 
   return (
     <motion.aside
       className="detail-panel glass"
-      initial={{ opacity: 0, x: 24 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 24 }}
+      initial={panelVariants.initial}
+      animate={panelVariants.animate}
+      exit={panelVariants.exit}
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       aria-label={`Iceberg ${icebergId} details`}
     >

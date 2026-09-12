@@ -5,6 +5,7 @@ interface UseResizableSidebarOptions {
   defaultWidth?: number;
   minWidth?: number;
   maxWidthRatio?: number;
+  mobileBreakpoint?: number;
 }
 
 export function useResizableSidebar({
@@ -12,7 +13,10 @@ export function useResizableSidebar({
   defaultWidth = 500,
   minWidth = 320,
   maxWidthRatio = 0.8,
+  mobileBreakpoint = 768,
 }: UseResizableSidebarOptions = {}) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < mobileBreakpoint);
+
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     if (storageKey) {
       try {
@@ -31,8 +35,28 @@ export function useResizableSidebar({
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
 
+  // Track mobile breakpoint changes
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${mobileBreakpoint - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    // Use addEventListener for modern browsers, addListener for older ones
+    if (mq.addEventListener) {
+      mq.addEventListener('change', handler);
+    } else {
+      mq.addListener(handler);
+    }
+    return () => {
+      if (mq.removeEventListener) {
+        mq.removeEventListener('change', handler);
+      } else {
+        mq.removeListener(handler);
+      }
+    };
+  }, [mobileBreakpoint]);
+
   const startResize = useCallback(
     (e: React.PointerEvent) => {
+      if (isMobile) return; // Disable drag on mobile
       e.preventDefault();
       setIsDragging(true);
       isDraggingRef.current = true;
@@ -58,7 +82,7 @@ export function useResizableSidebar({
       window.addEventListener('pointermove', handlePointerMove);
       window.addEventListener('pointerup', handlePointerUp);
     },
-    [minWidth, maxWidthRatio]
+    [isMobile, minWidth, maxWidthRatio]
   );
 
   useEffect(() => {
@@ -78,6 +102,7 @@ export function useResizableSidebar({
   return {
     sidebarWidth,
     isDragging,
+    isMobile,
     startResize,
     resetWidth,
   };

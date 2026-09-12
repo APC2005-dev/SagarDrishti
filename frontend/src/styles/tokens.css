@@ -26,5 +26,8 @@
   --r-sm: 3px;
   --r-md: 6px;
   --topbar-h: 56px;
+  --topbar-h-mobile: 52px;
+  --sidebar-z: 20;
+  --overlay-z: 30;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }

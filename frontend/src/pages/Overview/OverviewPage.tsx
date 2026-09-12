@@ -14,14 +14,17 @@ export default function OverviewPage() {
   const icebergs = useIcebergs();
   const forecasts = useLatestForecasts();
 
-  const { sidebarWidth, isDragging, startResize, resetWidth } = useResizableSidebar({
+  const { sidebarWidth, isDragging, isMobile, startResize, resetWidth } = useResizableSidebar({
     storageKey: 'sagar_sidebar_width_overview',
     defaultWidth: 520,
     minWidth: 380,
   });
 
   return (
-    <div className="split-resizable" style={{ gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}>
+    <div
+      className="split-resizable"
+      style={isMobile ? undefined : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}
+    >
       <section className="split-left scroll pad" aria-label="Mission summary">
         <div className="page-head">
           <div>
@@ -52,6 +55,7 @@ export default function OverviewPage() {
       <ResizeHandle
         width={sidebarWidth}
         isDragging={isDragging}
+        isMobile={isMobile}
         onPointerDown={startResize}
         onDoubleClick={resetWidth}
         label="Resize overview sidebar"

@@ -22,14 +22,17 @@ export default function RoutePlanningPage() {
   const icebergs = useIcebergs();
   const forecasts = useLatestForecasts();
 
-  const { sidebarWidth, isDragging, startResize, resetWidth } = useResizableSidebar({
+  const { sidebarWidth, isDragging, isMobile, startResize, resetWidth } = useResizableSidebar({
     storageKey: 'sagar_sidebar_width_route_planning',
     defaultWidth: 420,
     minWidth: 320,
   });
 
   return (
-    <div className="split-resizable" style={{ gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}>
+    <div
+      className="split-resizable"
+      style={isMobile ? undefined : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}
+    >
       <section className="split-left scroll pad" aria-label="Route planning inputs">
         <div className="page-head">
           <h1>Route planning</h1>
@@ -54,6 +57,7 @@ export default function RoutePlanningPage() {
       <ResizeHandle
         width={sidebarWidth}
         isDragging={isDragging}
+        isMobile={isMobile}
         onPointerDown={startResize}
         onDoubleClick={resetWidth}
         label="Resize route planning sidebar"

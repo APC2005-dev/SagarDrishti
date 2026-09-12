@@ -22,7 +22,7 @@ export default function IcebergsPage() {
   const [filter, setFilter] = useState('');
   const q = useDeferredValue(filter.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
 
-  const { sidebarWidth, isDragging, startResize, resetWidth } = useResizableSidebar({
+  const { sidebarWidth, isDragging, isMobile, startResize, resetWidth } = useResizableSidebar({
     storageKey: 'sagar_sidebar_width_icebergs',
     defaultWidth: 540,
     minWidth: 320,
@@ -35,7 +35,10 @@ export default function IcebergsPage() {
   }, [icebergs.data]);
 
   return (
-    <div className="split-resizable" style={{ gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}>
+    <div
+      className="split-resizable"
+      style={isMobile ? undefined : { gridTemplateColumns: `${sidebarWidth}px 6px 1fr` }}
+    >
       <section className="split-left" aria-label="Tracked icebergs">
         <div className="toolbar">
           <input
@@ -60,6 +63,7 @@ export default function IcebergsPage() {
       <ResizeHandle
         width={sidebarWidth}
         isDragging={isDragging}
+        isMobile={isMobile}
         onPointerDown={startResize}
         onDoubleClick={resetWidth}
         label="Resize icebergs sidebar"

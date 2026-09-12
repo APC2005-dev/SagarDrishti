@@ -26,7 +26,7 @@ export const OVERVIEW_WIDGETS: OverviewWidget[] = [
     title: 'Tracking',
     span: 2,
     render: (o) => (
-      <div className="grid-tiles" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
+      <div className="grid-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}>
         <Metric label="Tracked now" value={fmtNum(o.activeIcebergs)} tone="official" sub="in latest USNIC file" />
         <Metric label="Not in latest" value={fmtNum(o.notInLatestSource)} sub="history retained" />
         <Metric label="Stale" value={fmtNum(o.staleIcebergs)} tone={o.staleIcebergs ? 'warn' : 'default'} sub="old official fix" />
@@ -86,7 +86,7 @@ export const OVERVIEW_WIDGETS: OverviewWidget[] = [
     title: 'Model accuracy (mean great-circle error)',
     span: 2,
     render: (o) => (
-      <div className="grid-tiles" style={{ gridTemplateColumns: 'repeat(3, minmax(0,1fr))' }}>
+      <div className="grid-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
         {([1, 3, 7] as const).map((h) => {
           const bench = o.champion ? (h === 1 ? o.champion.day1Error : h === 3 ? o.champion.day3Error : o.champion.day7Error) : null;
           const live = err(o, h);
