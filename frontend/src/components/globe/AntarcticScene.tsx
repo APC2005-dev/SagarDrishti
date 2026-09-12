@@ -1,4 +1,5 @@
 import { Canvas } from '@react-three/fiber';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { CRS } from '../../constants';
@@ -29,37 +30,76 @@ interface Props {
 }
 
 function Legend({ hasForecasts }: { hasForecasts: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div className="map-overlay legend glass">
-      <div className="legend-row">
-        <span className="legend-swatch sw-official" />
-        OFFICIAL position (USNIC)
-      </div>
-      <div className="legend-row">
-        <span className="legend-swatch sw-stale" />
-        OFFICIAL · stale (&gt; threshold)
-      </div>
-      {hasForecasts && (
-        <>
-          <div className="legend-row">
-            <span className="legend-swatch sw-forecast" />
-            FORECAST position D+n (GRU)
-          </div>
-          <div className="legend-row">
-            <span className="legend-swatch sw-line" />
-            Forecast trajectory
-          </div>
-          <div className="legend-row">
-            <span className="legend-swatch sw-risk" />
-            p90 error radius
-          </div>
-        </>
-      )}
-      <div className="legend-row">
-        <span className="legend-swatch sw-history" />
-        Past track (selected)
-      </div>
-      <div className="legend-row dim">Wind / current / sea ice: analysis fields (toggle, bottom right)</div>
+    <div className="map-overlay legend-container">
+      <AnimatePresence mode="wait" initial={false}>
+        {!isOpen ? (
+          <motion.button
+            key="legend-toggle"
+            className="legend-toggle-btn"
+            onClick={() => setIsOpen(true)}
+            title="Expand legend"
+            aria-label="Expand map legend"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </motion.button>
+        ) : (
+          <motion.div
+            key="legend-panel"
+            className="legend glass"
+            initial={{ opacity: 0, scale: 0.9, originX: 0, originY: 1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <button
+              className="legend-close-btn"
+              onClick={() => setIsOpen(false)}
+              title="Close legend"
+              aria-label="Close map legend"
+            >
+              ✕
+            </button>
+            <div className="legend-row">
+              <span className="legend-swatch sw-official" />
+              OFFICIAL position (USNIC)
+            </div>
+            <div className="legend-row">
+              <span className="legend-swatch sw-stale" />
+              OFFICIAL · stale (&gt; threshold)
+            </div>
+            {hasForecasts && (
+              <>
+                <div className="legend-row">
+                  <span className="legend-swatch sw-forecast" />
+                  FORECAST position D+n (GRU)
+                </div>
+                <div className="legend-row">
+                  <span className="legend-swatch sw-line" />
+                  Forecast trajectory
+                </div>
+                <div className="legend-row">
+                  <span className="legend-swatch sw-risk" />
+                  p90 error radius
+                </div>
+              </>
+            )}
+            <div className="legend-row">
+              <span className="legend-swatch sw-history" />
+              Past track (selected)
+            </div>
+            <div className="legend-row dim">Wind / current / sea ice: analysis fields (toggle, bottom right)</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

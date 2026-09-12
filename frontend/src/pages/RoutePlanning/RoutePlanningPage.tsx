@@ -1,5 +1,4 @@
 import { SectionTitle } from '../../components/common/Metric';
-import { QueryState } from '../../components/common/QueryState';
 import { ResizeHandle } from '../../components/common/ResizeHandle';
 import { Chip } from '../../components/common/StatusChip';
 import { AntarcticScene } from '../../components/globe/AntarcticScene';
