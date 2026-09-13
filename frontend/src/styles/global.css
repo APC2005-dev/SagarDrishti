@@ -29,6 +29,7 @@ a {
   color: var(--official);
   text-decoration: none;
 }
+
 a:hover {
   text-decoration: underline;
 }
@@ -46,10 +47,12 @@ button {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(233, 236, 245, 0.12);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -70,6 +73,7 @@ button {
 .muted {
   color: var(--text-2);
 }
+
 .dim {
   color: var(--text-3);
 }
@@ -81,6 +85,10 @@ button {
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+}
+
+.split-left .panel.card {
+  flex-shrink: 0;
 }
 
 .glass {
