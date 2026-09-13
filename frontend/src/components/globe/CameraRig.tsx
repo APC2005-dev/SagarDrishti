@@ -18,9 +18,14 @@ export function CameraRig({ focus }: { focus: [number, number] | null }) {
 
   useEffect(() => {
     if (focus) {
-      const target = new THREE.Vector3(focus[0], 0, focus[1]);
-      const dir = new THREE.Vector3(focus[0] * 0.25, 2.6, focus[1] * 0.25 + 1.9);
-      flight.current = { target, position: target.clone().add(dir) };
+      const isHomeFocus = focus[0] === 0 && focus[1] === 0;
+      if (isHomeFocus) {
+        flight.current = { target: HOME_TARGET.clone(), position: HOME_POSITION.clone() };
+      } else {
+        const target = new THREE.Vector3(focus[0], 0, focus[1]);
+        const dir = new THREE.Vector3(focus[0] * 0.25, 2.6, focus[1] * 0.25 + 1.9);
+        flight.current = { target, position: target.clone().add(dir) };
+      }
     } else {
       flight.current = { target: HOME_TARGET.clone(), position: HOME_POSITION.clone() };
     }

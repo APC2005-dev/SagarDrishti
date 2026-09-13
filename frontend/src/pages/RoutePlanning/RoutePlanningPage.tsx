@@ -146,15 +146,16 @@ export default function RoutePlanningPage() {
 
   const resumable = !shown && !plan.isPending ? (persisted.data ?? null) : null;
 
-  // Fly the camera to the middle of the shown route. A 33 km hop is a few
-  // pixels on a whole-continent view, so without this a short route is
-  // technically drawn but effectively invisible.
+  // Fly the camera to the center of Antarctica when scanning, or middle of route when loaded
   const routeFocus = useMemo<[number, number] | null>(() => {
+    if (plan.isPending) {
+      return [0, 0]; // Center of Antarctica polar stereographic projection
+    }
     const points = shown?.waypoints;
     if (!points?.length) return null;
     const mid = points[Math.floor(points.length / 2)];
     return mid ? toScene(mid.latitude, mid.longitude) : null;
-  }, [shown]);
+  }, [shown, plan.isPending]);
 
   const failure = plan.isError ? errorParts(plan.error) : null;
   const samePort = !!departure && !!destination && departure.id === destination.id;
