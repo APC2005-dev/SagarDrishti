@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { Overview } from '../../types/api';
-import { fmtDate, fmtKm, fmtNum, relTime } from '../../utils/format';
+import { fmtDate, fmtNum, relTime } from '../../utils/format';
 import { Metric } from '../common/Metric';
 import { FeedStateChip } from '../common/StatusChip';
 
@@ -17,8 +17,6 @@ export interface OverviewWidget {
   planned?: boolean;
   render: (o: Overview) => ReactNode;
 }
-
-const err = (o: Overview, h: number) => o.operationalErrors.find((e) => e.horizonDays === h);
 
 export const OVERVIEW_WIDGETS: OverviewWidget[] = [
   {
@@ -49,35 +47,6 @@ export const OVERVIEW_WIDGETS: OverviewWidget[] = [
           </div>
           {o.feedStateReasons[0] && <div className="metric-sub">{o.feedStateReasons[0]}</div>}
         </div>
-      </div>
-    ),
-  },
-  {
-    id: 'accuracy',
-    title: 'Model accuracy (mean great-circle error)',
-    span: 2,
-    render: (o) => (
-      <div className="grid-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
-        {([1, 3, 7] as const).map((h) => {
-          const bench = o.champion ? (h === 1 ? o.champion.day1Error : h === 3 ? o.champion.day3Error : o.champion.day7Error) : null;
-          const live = err(o, h);
-          return (
-            <Metric
-              key={h}
-              label={`Day ${h}`}
-              value={live?.maeKm != null ? fmtKm(live.maeKm) : '—'}
-              tone="forecast"
-              sub={
-                <>
-                  operational n={live?.n ?? 0}
-                  <br />
-                  benchmark {fmtKm(bench)}
-                </>
-              }
-              title="Operational = scored against later official USNIC observations. Benchmark = historical test split of the model version."
-            />
-          );
-        })}
       </div>
     ),
   },
