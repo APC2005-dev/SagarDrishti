@@ -67,12 +67,17 @@ export default function SeaIceForecastPage() {
             {!s.sourceConfigured && <div className="note">{s.sourceReason}</div>}
 
             <div className="seaice-layout">
-              <div>
+              <motion.div
+                className="seaice-column"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+              >
                 <SectionTitle>Deployed model</SectionTitle>
                 <ModelCard status={s} />
 
                 <SectionTitle>Official data window</SectionTitle>
-                <div className="panel card">
+                <div className="panel card seaice-panel">
                   <div className="seaice-window-metrics">
                     <Metric label="Stored observations" value={s.observationCount.toLocaleString()} />
                     <Metric label="Latest official" value={s.latestObservation ? fmtDate(s.latestObservation.observationDate) : '—'} />
@@ -99,9 +104,9 @@ export default function SeaIceForecastPage() {
                     {s.forecastUnavailableReason ?? 'No sea-ice forecast available.'}
                   </div>
                 ) : (
-                  <div className="panel card">
+                  <div className="panel card seaice-panel">
                     <div className="table-wrap">
-                      <table className="data" style={{ minWidth: '100%' }}>
+                      <table className="data seaice-table seaice-forecast-table">
                         <thead>
                           <tr>
                             <th>Model</th>
@@ -143,8 +148,8 @@ export default function SeaIceForecastPage() {
                 {s.recentEvaluations.length > 0 && (
                   <>
                     <SectionTitle>Evaluations vs official data</SectionTitle>
-                    <div className="panel card">
-                      <table className="data">
+                    <div className="panel card seaice-panel">
+                      <table className="data seaice-table">
                         <thead>
                           <tr><th>Model</th><th>Horizon</th><th>Target</th><th>RMSE</th><th>Persistence</th></tr>
                         </thead>
@@ -163,11 +168,16 @@ export default function SeaIceForecastPage() {
                     </div>
                   </>
                 )}
-              </div>
+              </motion.div>
 
-              <div>
+              <motion.div
+                className="seaice-column"
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.35, delay: 0.08, ease: 'easeOut' }}
+              >
                 <SectionTitle>Concentration field</SectionTitle>
-                <div className="panel card">
+                <div className="panel card seaice-panel">
                   <div className="segmented seaice-field-selector" role="radiogroup" aria-label="Sea-ice field" style={{ marginBottom: 12 }}>
                     {([null, ...horizons] as (number | null)[]).map((h) => (
                       <button
@@ -216,20 +226,20 @@ export default function SeaIceForecastPage() {
                 </div>
 
                 <SectionTitle>Recent runs</SectionTitle>
-                <div className="panel card">
+                <div className="panel card seaice-panel">
                   {s.recentRuns.length === 0 ? (
                     <div className="dim mono" style={{ fontSize: 12 }}>No sea-ice runs yet.</div>
                   ) : (
-                    <table className="data">
+                    <table className="data seaice-table">
                       <thead>
                         <tr><th>Kind</th><th>Status</th><th>New</th><th>Started</th></tr>
                       </thead>
                       <tbody>
                         {s.recentRuns.map((r) => (
-                          <tr key={r.id}>
+                            <tr key={r.id} className={r.status === 'failed' ? 'seaice-run-failed' : undefined}>
                             <td>{r.kind}</td>
                             <td>
-                              <Chip tone={r.status === 'failed' ? 'bad' : r.status === 'success' ? 'ok' : 'neutral'}>
+                              <Chip pulse={r.status === 'failed'} tone={r.status === 'failed' ? 'bad' : r.status === 'success' ? 'ok' : 'neutral'}>
                                 {r.status.toUpperCase()}
                               </Chip>
                             </td>
@@ -241,7 +251,7 @@ export default function SeaIceForecastPage() {
                     </table>
                   )}
                 </div>
-              </div>
+              </motion.div>
             </div>
           </>
         )}

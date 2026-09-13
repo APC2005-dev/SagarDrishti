@@ -1227,6 +1227,12 @@ table.data tbody tr.selected {
   gap: 20px;
   align-items: start;
 }
+.seaice-column {
+  min-width: 0;
+}
+.seaice-panel {
+  width: 100%;
+}
 .seaice-window-metrics {
   display: grid;
   gap: 10px;
@@ -1250,6 +1256,30 @@ table.data tbody tr.selected {
 }
 .seaice-map-legend span:last-child {
   overflow-wrap: anywhere;
+}
+.seaice-table {
+  min-width: 0 !important;
+  table-layout: fixed;
+}
+.seaice-table th,
+.seaice-table td {
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seaice-forecast-table th:nth-child(1) { width: 24%; }
+.seaice-forecast-table th:nth-child(2) { width: 18%; }
+.seaice-forecast-table th:nth-child(3) { width: 16%; }
+.seaice-forecast-table th:nth-child(4) { width: 18%; }
+.seaice-forecast-table th:nth-child(5) { width: 24%; }
+.seaice-run-failed {
+  animation: seaice-failed-pulse 2.4s ease-in-out infinite;
+}
+@keyframes seaice-failed-pulse {
+  50% {
+    background: rgba(229, 113, 106, 0.08);
+    box-shadow: inset 2px 0 0 var(--bad);
+  }
 }
 
 @media (max-width: 767px) {
@@ -1285,6 +1315,10 @@ table.data tbody tr.selected {
   }
   .seaice-field-selector {
     justify-content: flex-start;
+  }
+  .seaice-table {
+    min-width: 480px !important;
+    table-layout: auto;
   }
 }
 
