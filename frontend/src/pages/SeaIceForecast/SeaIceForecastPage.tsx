@@ -32,15 +32,14 @@ function ModelCard({ status }: { status: SeaIceStatus }) {
         <h3 className="mono" style={{ margin: 0 }}>{model.version}</h3>
         <Chip tone={toneFor(model.status)}>{model.status.toUpperCase()}</Chip>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginTop: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 12 }}>
         <Metric label="Architecture" value={model.architecture} sub={model.architectureVersion} />
-        <Metric label="Parent" value={model.parentVersion ?? '—'} />
         <Metric label="Input window" value={`${model.inputWindowEntries} entries`} />
-        <Metric label="Deployed" value={model.deployedAt ? fmtDate(model.deployedAt) : '—'} sub={model.deployedAt ? fmtDateTime(model.deployedAt) : undefined} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 10 }}>
         <Metric label="Day-1 RMSE" value={model.day1Rmse?.toFixed(5) ?? '—'} />
         <Metric label="Day-3 RMSE" value={model.day3Rmse?.toFixed(5) ?? '—'} />
         <Metric label="Day-7 RMSE" value={model.day7Rmse?.toFixed(5) ?? '—'} />
-        <Metric label="Artifact origin" value={model.artifactOrigin.replace(/_/g, " ")} />
       </div>
       {model.statusReason && (
         <div className="dim" style={{ fontSize: 11, marginTop: 10 }}>{model.statusReason}</div>
@@ -58,7 +57,7 @@ export default function SeaIceForecastPage() {
   const field = useSeaIceField(horizon, canRenderField);
 
   return (
-    <div className="page-scroll" style={{ maxWidth: 1180 }}>
+    <div className="page-scroll">
       <QueryState query={status}>
         {(s) => (
           <>
@@ -76,17 +75,16 @@ export default function SeaIceForecastPage() {
 
             {!s.sourceConfigured && <div className="note">{s.sourceReason}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 460px)', gap: 16, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 480px) minmax(380px, 1fr)', gap: 20, alignItems: 'start' }}>
               <div>
                 <SectionTitle>Deployed model</SectionTitle>
                 <ModelCard status={s} />
 
                 <SectionTitle>Official data window</SectionTitle>
                 <div className="panel card">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
                     <Metric label="Stored observations" value={s.observationCount.toLocaleString()} />
                     <Metric label="Latest official" value={s.latestObservation ? fmtDate(s.latestObservation.observationDate) : '—'} />
-                    <Metric label="Grid" value={s.latestObservation ? `${s.latestObservation.gridShape.join('×')} @ ${s.latestObservation.gridResolutionDeg}°` : '—'} />
                     <Metric label="Window" value={`${s.window.length}/${s.windowEntriesRequired} entries`} />
                   </div>
                   <div className="dim" style={{ fontSize: 11, marginTop: 10 }}>
@@ -111,24 +109,32 @@ export default function SeaIceForecastPage() {
                   </div>
                 ) : (
                   <div className="panel card">
-                    <table className="data">
-                      <thead>
-                        <tr>
-                          <th>Model</th><th>Anchor</th><th>Horizon</th><th>Target</th><th>Mean SIC</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {s.latestForecasts.map((f) => (
-                          <tr key={f.horizonDays}>
-                            <td className="mono">{f.modelVersion}</td>
-                            <td>{fmtDate(f.anchorDate)}</td>
-                            <td>D+{f.horizonDays}</td>
-                            <td>{fmtDate(f.targetDate)}</td>
-                            <td className="mono">{f.meanConcentration?.toFixed(4) ?? '—'}</td>
+                    <div className="table-wrap">
+                      <table className="data" style={{ minWidth: '100%' }}>
+                        <thead>
+                          <tr>
+                            <th>Model</th>
+                            <th>Anchor</th>
+                            <th>Horizon</th>
+                            <th>Target</th>
+                            <th className="num" style={{ textAlign: 'right', paddingRight: 12 }}>Mean SIC</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {s.latestForecasts.map((f) => (
+                            <tr key={f.horizonDays}>
+                              <td className="mono">{f.modelVersion}</td>
+                              <td>{fmtDate(f.anchorDate)}</td>
+                              <td>D+{f.horizonDays}</td>
+                              <td>{fmtDate(f.targetDate)}</td>
+                              <td className="mono num" style={{ textAlign: 'right', paddingRight: 12, fontWeight: 500 }}>
+                                {f.meanConcentration != null ? `${(f.meanConcentration * 100).toFixed(1)}% (${f.meanConcentration.toFixed(4)})` : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                     {(() => {
                       const head = s.latestForecasts[0];
                       if (!head) return null;

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { SeaIceField } from '../../types/api';
 import { toPolar } from '../../utils/projection';
@@ -26,27 +26,53 @@ function colour(concentration: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-export function ConcentrationMap({ field, size = 420 }: { field: SeaIceField; size?: number }) {
+export function ConcentrationMap({ field, size }: { field: SeaIceField; size?: number }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const ref = useRef<HTMLCanvasElement | null>(null);
+  const [measuredSize, setMeasuredSize] = useState<number>(size || 520);
+
+  useEffect(() => {
+    if (size) {
+      setMeasuredSize(size);
+      return;
+    }
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const w = container.clientWidth;
+      if (w > 0) {
+        // Fit available width nicely, leaving breathing room for legend
+        setMeasuredSize(Math.max(300, Math.floor(w - 16)));
+      }
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [size]);
+
+  const activeSize = size || measuredSize;
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
+    canvas.width = activeSize * dpr;
+    canvas.height = activeSize * dpr;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, size, size);
+    ctx.clearRect(0, 0, activeSize, activeSize);
 
     // Ocean backdrop so absent cells read as "no data", not as zero ice.
     ctx.fillStyle = 'rgba(12, 22, 48, 0.55)';
     ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+    ctx.arc(activeSize / 2, activeSize / 2, activeSize / 2 - 1, 0, Math.PI * 2);
     ctx.fill();
 
-    const scale = size / (2 * EXTENT_M);
+    const scale = activeSize / (2 * EXTENT_M);
     // A cell spans resolutionDeg in both axes, but on a polar projection its
     // WIDTH shrinks towards the pole (arc length = radius x delta-longitude)
     // while its height stays roughly constant. Sizing every cell identically
@@ -60,8 +86,8 @@ export function ConcentrationMap({ field, size = 420 }: { field: SeaIceField; si
       const [x, y] = toPolar(lat, lon);
       const radius = Math.hypot(x, y);
       const cellWidth = Math.max(1.2, radius * dLon * scale);
-      const px = size / 2 + x * scale;
-      const py = size / 2 - y * scale;
+      const px = activeSize / 2 + x * scale;
+      const py = activeSize / 2 - y * scale;
       ctx.fillStyle = colour(value);
       // Overlap slightly so neighbouring cells tile without seams.
       ctx.fillRect(px - cellWidth / 2, py - cellHeight / 2, cellWidth + 0.6, cellHeight + 0.6);
@@ -73,19 +99,19 @@ export function ConcentrationMap({ field, size = 420 }: { field: SeaIceField; si
     for (const lat of [-60, -75]) {
       const [, ry] = toPolar(lat, 0);
       ctx.beginPath();
-      ctx.arc(size / 2, size / 2, Math.abs(ry) * scale, 0, Math.PI * 2);
+      ctx.arc(activeSize / 2, activeSize / 2, Math.abs(ry) * scale, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+    ctx.arc(activeSize / 2, activeSize / 2, activeSize / 2 - 1, 0, Math.PI * 2);
     ctx.stroke();
-  }, [field, size]);
+  }, [field, activeSize]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: '100%' }}>
       <canvas
         ref={ref}
-        style={{ width: size, height: size, maxWidth: '100%' }}
+        style={{ width: activeSize, height: activeSize, maxWidth: '100%', aspectRatio: '1/1' }}
         aria-label={`Sea-ice concentration, ${field.kind}, valid ${field.validDate}`}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11 }} className="mono">
