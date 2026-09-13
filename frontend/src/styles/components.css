@@ -1165,16 +1165,10 @@ table.data tbody tr.selected {
   gap: 20px;
   align-items: start;
 }
-.seaice-model-metrics,
-.seaice-model-rmse,
 .seaice-window-metrics {
   display: grid;
   gap: 10px;
 }
-.seaice-model-metrics {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.seaice-model-rmse,
 .seaice-window-metrics {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -1221,12 +1215,9 @@ table.data tbody tr.selected {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
-  .seaice-model-metrics,
-  .seaice-model-rmse,
   .seaice-window-metrics {
     gap: 8px;
   }
-  .seaice-model-rmse,
   .seaice-window-metrics {
     grid-template-columns: 1fr;
   }

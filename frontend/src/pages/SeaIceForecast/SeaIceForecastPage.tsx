@@ -32,15 +32,6 @@ function ModelCard({ status }: { status: SeaIceStatus }) {
         <h3 className="mono" style={{ margin: 0 }}>{model.version}</h3>
         <Chip tone={toneFor(model.status)}>{model.status.toUpperCase()}</Chip>
       </div>
-      <div className="seaice-model-metrics" style={{ marginTop: 12 }}>
-        <Metric label="Architecture" value={model.architecture} sub={model.architectureVersion} />
-        <Metric label="Input window" value={`${model.inputWindowEntries} entries`} />
-      </div>
-      <div className="seaice-model-rmse" style={{ marginTop: 10 }}>
-        <Metric label="Day-1 RMSE" value={model.day1Rmse?.toFixed(5) ?? '—'} />
-        <Metric label="Day-3 RMSE" value={model.day3Rmse?.toFixed(5) ?? '—'} />
-        <Metric label="Day-7 RMSE" value={model.day7Rmse?.toFixed(5) ?? '—'} />
-      </div>
       {model.statusReason && (
         <div className="dim" style={{ fontSize: 11, marginTop: 10 }}>{model.statusReason}</div>
       )}
