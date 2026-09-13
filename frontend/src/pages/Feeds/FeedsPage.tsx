@@ -8,9 +8,6 @@ import { useActiveRoute, useFeeds } from '../../hooks/queries';
 import type { Feed } from '../../types/api';
 import { fmtDate, fmtDateTime, fmtNum, relTime, shortHash } from '../../utils/format';
 
-/** Sources the architecture anticipates. Listed as not configured — no data is shown for them. */
-const PLANNED = [{ name: 'Vessel positions (AIS)', note: 'Route planning input.' }];
-
 export default function FeedsPage() {
   const feeds = useFeeds();
   const activeRoute = useActiveRoute();
@@ -21,19 +18,15 @@ export default function FeedsPage() {
    * sources are the future feature inputs and are labelled as such. Nothing is
    * invented here when a feed is missing — an absent feed simply is not shown.
    */
-  const { coreFeeds, environmentalFeeds } = useMemo(() => {
+  const { coreFeeds } = useMemo(() => {
     const list = feeds.data ?? [];
     const rank = (f: Feed) => (f.category === 'iceberg' ? 0 : f.category === 'sea_ice' ? 1 : 2);
     const sorted = [...list].sort((a, b) => rank(a) - rank(b));
     return {
       coreFeeds: sorted.filter((f) => f.category !== 'environmental'),
-      environmentalFeeds: sorted.filter((f) => f.category === 'environmental'),
     };
   }, [feeds.data]);
-  const filteredFeeds = useMemo(
-    () => [...coreFeeds, ...environmentalFeeds],
-    [coreFeeds, environmentalFeeds],
-  );
+  const filteredFeeds = useMemo(() => coreFeeds, [coreFeeds]);
 
   return (
     <div className="page-scroll">
@@ -79,7 +72,6 @@ export default function FeedsPage() {
       <QueryState query={feeds}>
         {() => {
           const configuredFeeds = filteredFeeds.filter((f) => f.configured);
-          const unconfiguredFeeds = filteredFeeds.filter((f) => !f.configured);
 
           return (
             <div className="cards">
@@ -130,31 +122,6 @@ export default function FeedsPage() {
                   </div>
                   {f.errorMessage && <div className="note warn" style={{ marginTop: 12 }}>{f.errorMessage}</div>}
                 </motion.div>
-              ))}
-
-              {unconfiguredFeeds.map((f) => (
-                <div key={f.id} className="placeholder-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ color: 'var(--text-2)' }}>{f.name}</span>
-                    <Chip tone="neutral">NOT CONFIGURED</Chip>
-                  </div>
-                  <p style={{ fontSize: 12, marginBottom: 0 }}>{f.description}</p>
-                  {f.stateReasons.length > 0 && (
-                    <span className="mono dim" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
-                      {f.stateReasons.join(' · ')}
-                    </span>
-                  )}
-                </div>
-              ))}
-
-              {PLANNED.map((p) => (
-                <div key={p.name} className="placeholder-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ color: 'var(--text-2)' }}>{p.name}</span>
-                    <Chip tone="neutral">NOT CONFIGURED</Chip>
-                  </div>
-                  <p style={{ fontSize: 12, marginBottom: 0 }}>{p.note}</p>
-                </div>
               ))}
             </div>
           );
