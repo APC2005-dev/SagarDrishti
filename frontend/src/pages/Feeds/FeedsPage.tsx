@@ -59,13 +59,6 @@ export default function FeedsPage() {
             />
             <KV k="SIC exposure" v={activeRoute.data.sicExposureHours?.toFixed(2) ?? '—'} />
             <KV k="Distance" v={activeRoute.data.distanceKm != null ? `${activeRoute.data.distanceKm.toFixed(0)} km` : '—'} />
-            <KV k="Trajectory model" v={activeRoute.data.trajectoryModelVersion ?? '—'} />
-            <KV k="Sea-ice model" v={activeRoute.data.seaIceModelVersion ?? '—'} />
-            <KV k="Route planner" v={activeRoute.data.routePlannerVersion} />
-            <KV k="Route confidence" v={activeRoute.data.confidenceStatus.replace(/_/g, ' ')} />
-          </div>
-          <div className="dim mono" style={{ fontSize: 11, marginTop: 8 }}>
-            route {activeRoute.data.routeId}
           </div>
         </div>
       )}
