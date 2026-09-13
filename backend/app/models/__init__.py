@@ -9,6 +9,7 @@ from app.models.ml import (
     ModelVersion,
     RetrainingRun,
 )
+from app.models.routing import Port, Route
 from app.models.seaice import (
     SeaIceEvaluation,
     SeaIceForecast,
@@ -33,9 +34,11 @@ __all__ = [
     "ModelStatusEvent",
     "ModelVersion",
     "Observation",
+    "Port",
     "ObservationEnvironment",
     "ObservationRevision",
     "RetrainingRun",
+    "Route",
     "SeaIceEvaluation",
     "SeaIceForecast",
     "SeaIceForecastSet",

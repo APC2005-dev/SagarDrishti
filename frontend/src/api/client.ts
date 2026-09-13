@@ -19,7 +19,10 @@ import type {
   Observation,
   Overview,
   Page,
+  PortSummary,
   RetrainingStatus,
+  Route,
+  RouteSummaryRow,
   SeaIceField,
   SeaIceStatus,
 } from '../types/api';
@@ -70,6 +73,56 @@ async function get<T>(path: string, params?: Params): Promise<T> {
   return (await res.json()) as T;
 }
 
+/**
+ * Route planning runs a bounded A* search server-side, so it needs a longer
+ * budget than a read. Backend failures carry `{code, message}` in `detail`; the
+ * code is preserved in `ApiError.detail` so the UI can explain it.
+ */
+async function post<T>(path: string, body: unknown, timeoutMs = 240_000): Promise<T> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, 'backend unreachable', null);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) {
+    let detail = res.statusText;
+    let code: string | null = null;
+    try {
+      const parsed = (await res.json()) as { detail?: unknown };
+      const d = parsed.detail;
+      if (typeof d === 'string') detail = d;
+      else if (d && typeof d === 'object') {
+        const obj = d as { code?: string; message?: string };
+        code = obj.code ?? null;
+        detail = obj.message ?? detail;
+      }
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new ApiError(res.status, code ? `${code}|${detail}` : detail, res.headers.get('X-Request-ID'));
+  }
+  return (await res.json()) as T;
+}
+
+/** Split the `CODE|message` form produced above. */
+export function errorParts(error: unknown): { code: string | null; message: string } {
+  if (error instanceof ApiError) {
+    const [head, ...rest] = error.detail.split('|');
+    return rest.length ? { code: head ?? null, message: rest.join('|') } : { code: null, message: error.detail };
+  }
+  return { code: null, message: error instanceof Error ? error.message : 'Unexpected error' };
+}
+
 export const api = {
   health: () => get<HealthCheck>('/health/ready'),
   overview: () => get<Overview>('/overview'),
@@ -98,6 +151,18 @@ export const api = {
   environmentRuns: () => get<EnvRun[]>('/environment/runs', { limit: 30 }),
   environmentField: (group: EnvGroup) => get<EnvField>('/environment/field', { group }),
   icebergEnvironment: (id: string) => get<IcebergEnvironment>(`/icebergs/${encodeURIComponent(id)}/environment`),
+  searchPorts: (q: string, domainOnly = true) =>
+    get<PortSummary[]>('/ports/search', { q, limit: 10, domain_only: domainOnly }),
+  planRoute: (departurePortId: string, destinationPortId: string, maxSic?: number) =>
+    post<Route>('/routes', { departurePortId, destinationPortId, maxSic }),
+  route: (id: string) => get<Route>(`/routes/${encodeURIComponent(id)}`),
+  activeRoute: () => get<RouteSummaryRow | null>('/routes/active'),
+  /** Full geometry of the active route, so a refresh can redraw it. */
+  activeRouteDetail: async () => {
+    const summary = await get<RouteSummaryRow | null>('/routes/active');
+    return summary ? get<Route>(`/routes/${encodeURIComponent(summary.routeId)}`) : null;
+  },
+  routeHistory: () => get<RouteSummaryRow[]>('/routes', { limit: 20 }),
   seaIceStatus: () => get<SeaIceStatus>('/sea-ice/status'),
   seaIceField: (horizon: number | null, stride = 1) =>
     horizon == null

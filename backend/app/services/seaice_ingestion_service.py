@@ -45,6 +45,14 @@ log = get_logger(__name__)
 # grids always say which pipeline produced them.
 PREPROCESSING_VERSION = f"coarsen{COARSEN_FACTOR}_v1"
 
+
+class _EmptyField(Exception):
+    """The source published this date with no retrieved data at all."""
+
+    def __init__(self, day: date) -> None:
+        super().__init__(f"{day}: the source field contains no valid cells")
+        self.day = day
+
 # Distinguishes "caller said nothing, use the poll cap" from an explicit
 # ``None``, which means "no cap" (a one-off historical backfill).
 _USE_POLL_CAP = object()
@@ -59,6 +67,7 @@ class IngestionOutcome:
     seen: int = 0
     new: int = 0
     duplicates: int = 0
+    empty: int = 0
     stored_dates: list[str] = field(default_factory=list)
     error: str | None = None
 
@@ -71,6 +80,7 @@ class IngestionOutcome:
             "entries_seen": self.seen,
             "entries_new": self.new,
             "entries_duplicate": self.duplicates,
+            "entries_empty_at_source": self.empty,
             "stored_dates": self.stored_dates,
             "error": self.error,
         }
@@ -168,7 +178,11 @@ class SeaIceIngestionService:
                     if day in stored_now:  # a concurrent run stored it first
                         outcome.duplicates += 1
                         continue
-                    self._store(entry, run)
+                    try:
+                        self._store(entry, run)
+                    except _EmptyField:
+                        outcome.empty += 1
+                        continue
                     stored_now.add(day)
                     outcome.new += 1
                     outcome.stored_dates.append(day.isoformat())
@@ -203,8 +217,16 @@ class SeaIceIngestionService:
                 f"{day}: coarsened grid is {concentration.shape}, expected {GRID_SHAPE}; "
                 "the source grid changed and the base model's weights assume the trained shape"
             )
-        stored = save_observation(Path(self.settings.seaice_data_dir), day, concentration, mask)
         valid = int(mask.sum())
+        if valid == 0:
+            # The source sometimes publishes a date before the retrieval exists,
+            # giving an all-NaN field. That is not an observation: storing it
+            # would put an empty grid into the model's 7-entry window (and make
+            # it the persistence channel). Skip it; it will be picked up on a
+            # later poll once the real field is published.
+            log.warning("seaice_observation_empty_skipped", date=day.isoformat(), dataset_id=self.settings.seaice_dataset_id)
+            raise _EmptyField(day)
+        stored = save_observation(Path(self.settings.seaice_data_dir), day, concentration, mask)
         observation = SeaIceObservation(
             observation_date=day,
             source_time=entry.source_time,
@@ -236,16 +258,25 @@ def _secret(value: Any) -> str | None:
     return value.get_secret_value() if value is not None else None
 
 
-def load_recent_entries(session: Session, window: int) -> list[SeaIceObservation]:
+def load_recent_entries(
+    session: Session, window: int, anchor_date: date | None = None
+) -> list[SeaIceObservation]:
     """The last ``window`` chronological sea-ice entries, oldest first.
 
     ENTRY-BASED, not calendar-based: this returns the most recent ``window``
     rows that exist, whatever dates they carry. Gaps in the official source are
-    preserved as-is and never filled with fabricated days.
+    preserved as-is and never filled with fabricated days. ``anchor_date`` ends
+    the window at that entry instead of at the newest one, so a consumer can ask
+    for the window as it stood at a given reference time.
     """
+    # Rows with no retrieved data are real history (the source published that
+    # date empty) but must never enter a model input window.
+    query = select(SeaIceObservation).where(SeaIceObservation.n_valid_cells > 0)
+    if anchor_date is not None:
+        query = query.where(SeaIceObservation.observation_date <= anchor_date)
     rows = list(
         session.execute(
-            select(SeaIceObservation).order_by(SeaIceObservation.observation_date.desc()).limit(window)
+            query.order_by(SeaIceObservation.observation_date.desc()).limit(window)
         ).scalars()
     )
     return sorted(rows, key=lambda o: o.observation_date)

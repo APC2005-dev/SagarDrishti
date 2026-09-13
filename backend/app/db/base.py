@@ -15,6 +15,7 @@ TRACKING_SCHEMA = "tracking"
 ML_SCHEMA = "ml"
 ENV_SCHEMA = "environmental"
 SEAICE_SCHEMA = "seaice"
+ROUTING_SCHEMA = "routing"
 
 
 class Base(DeclarativeBase):

@@ -59,7 +59,14 @@ class SeaIceForecastService:
         self.settings = settings
         self.registry = SeaIceRegistry(session, settings)
 
-    def run(self, trigger: str = "scheduled") -> ForecastOutcome:
+    def run(self, trigger: str = "scheduled", anchor_date: date | None = None) -> ForecastOutcome:
+        """Forecast from the latest window, or from the window ending on ``anchor_date``.
+
+        An explicit anchor lets a consumer (the route planner) obtain a sea-ice
+        forecast whose reference time matches the iceberg forecast it must be
+        combined with. It is inference on the deployed champion — never training —
+        and an existing forecast for that anchor is reused rather than recomputed.
+        """
         started = datetime.now(UTC)
         run = SeaIceRun(kind="forecast", trigger=trigger, dataset_id=self.settings.seaice_dataset_id, started_at=started)
         self.session.add(run)
@@ -72,10 +79,14 @@ class SeaIceForecastService:
                 return self._finish(run, outcome, started)
             outcome.model_version = champion.version
 
-            entries = load_recent_entries(self.session, WINDOW)
+            entries = load_recent_entries(self.session, WINDOW, anchor_date)
             if len(entries) < WINDOW:
                 outcome.status = "skipped"
-                outcome.error = f"only {len(entries)} sea-ice entries stored; {WINDOW} chronological entries are required"
+                outcome.error = (
+                    f"only {len(entries)} sea-ice entries available"
+                    + (f" up to {anchor_date}" if anchor_date else "")
+                    + f"; {WINDOW} chronological entries are required"
+                )
                 return self._finish(run, outcome, started)
 
             anchor = entries[-1]

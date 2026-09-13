@@ -26,7 +26,10 @@ interface Props {
   showLegend?: boolean;
   showHistory?: boolean;
   showLayerToggles?: boolean;
+  /** Overlay markup rendered above the canvas (HTML). */
   children?: React.ReactNode;
+  /** Extra 3D layers rendered INSIDE the canvas, where R3F hooks work. */
+  sceneChildren?: React.ReactNode;
 }
 
 function Legend({ hasForecasts }: { hasForecasts: boolean }) {
@@ -113,6 +116,7 @@ export function AntarcticScene({
   showHistory = true,
   showLayerToggles = true,
   children,
+  sceneChildren,
 }: Props) {
   const selectedId = useUi((s) => s.selectedIcebergId);
   const hoveredId = useUi((s) => s.hoveredIcebergId);
@@ -169,6 +173,7 @@ export function AntarcticScene({
         {layers.icebergs && (
           <IcebergLayer icebergs={plottable} selectedId={selectedId} hoveredId={hoveredId} onHover={hover} onSelect={select} />
         )}
+        {sceneChildren}
         <CameraRig focus={focus} />
       </Canvas>
 

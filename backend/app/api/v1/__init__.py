@@ -10,6 +10,7 @@ from app.api.v1 import (
     models,
     operations,
     overview,
+    routes,
     seaice,
 )
 
@@ -24,3 +25,5 @@ api_router.include_router(feeds.router)
 api_router.include_router(basemap.router)
 api_router.include_router(environment.router)
 api_router.include_router(seaice.router)
+api_router.include_router(routes.port_router)
+api_router.include_router(routes.route_router)

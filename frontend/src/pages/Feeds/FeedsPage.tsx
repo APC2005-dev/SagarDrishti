@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { KV } from '../../components/common/Metric';
 import { QueryState } from '../../components/common/QueryState';
 import { Chip, FeedStateChip } from '../../components/common/StatusChip';
-import { useFeeds } from '../../hooks/queries';
+import { useActiveRoute, useFeeds } from '../../hooks/queries';
 import type { Feed } from '../../types/api';
 import { fmtDate, fmtDateTime, fmtNum, relTime, shortHash } from '../../utils/format';
 
@@ -13,6 +13,7 @@ const PLANNED = [{ name: 'Vessel positions (AIS)', note: 'Route planning input.'
 
 export default function FeedsPage() {
   const feeds = useFeeds();
+  const activeRoute = useActiveRoute();
 
   /**
    * Driven entirely by the backend list. Core model feeds (the iceberg CSV and
@@ -42,6 +43,39 @@ export default function FeedsPage() {
           the browser never contacts sources directly — all data flows through the backend
         </span>
       </div>
+      {activeRoute.data && (
+        <div className="panel card" style={{ marginBottom: 14, borderColor: 'var(--ok)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+            <h3 style={{ margin: 0 }}>Active vessel</h3>
+            <Chip tone="ok">{activeRoute.data.status}</Chip>
+          </div>
+          <div className="mono" style={{ fontSize: 13, margin: '10px 0' }}>
+            {activeRoute.data.departureName}
+            <span className="dim" style={{ margin: '0 8px' }}>→</span>
+            {activeRoute.data.destinationName}
+          </div>
+          <div className="kv-grid">
+            <KV k="Fuel proxy" v={activeRoute.data.fuelProxy?.toFixed(2) ?? '—'} />
+            <KV
+              k="Travel duration"
+              v={
+                activeRoute.data.durationHours != null
+                  ? `${Math.floor(activeRoute.data.durationHours / 24)}d ${Math.round(activeRoute.data.durationHours % 24)}h`
+                  : '—'
+              }
+            />
+            <KV k="SIC exposure" v={activeRoute.data.sicExposureHours?.toFixed(2) ?? '—'} />
+            <KV k="Distance" v={activeRoute.data.distanceKm != null ? `${activeRoute.data.distanceKm.toFixed(0)} km` : '—'} />
+            <KV k="Trajectory model" v={activeRoute.data.trajectoryModelVersion ?? '—'} />
+            <KV k="Sea-ice model" v={activeRoute.data.seaIceModelVersion ?? '—'} />
+            <KV k="Route planner" v={activeRoute.data.routePlannerVersion} />
+            <KV k="Route confidence" v={activeRoute.data.confidenceStatus.replace(/_/g, ' ')} />
+          </div>
+          <div className="dim mono" style={{ fontSize: 11, marginTop: 8 }}>
+            route {activeRoute.data.routeId}
+          </div>
+        </div>
+      )}
       <QueryState query={feeds}>
         {() => {
           const configuredFeeds = filteredFeeds.filter((f) => f.configured);

@@ -87,3 +87,15 @@ export const useSeaIceField = (horizon: number | null, enabled: boolean) =>
     retry: false,
     staleTime: 30 * MIN,
   });
+
+/**
+ * The active vessel route comes from persisted backend state, not React state,
+ * so it survives a browser refresh and is visible on any page.
+ */
+export const useActiveRoute = () =>
+  useQuery({ queryKey: ['activeRoute'], queryFn: api.activeRoute, refetchInterval: POLL.overview });
+/** Full active route (geometry included) so a browser refresh redraws it. */
+export const useActiveRouteDetail = () =>
+  useQuery({ queryKey: ['activeRouteDetail'], queryFn: api.activeRouteDetail, staleTime: 30_000 });
+export const useRouteHistory = () =>
+  useQuery({ queryKey: ['routeHistory'], queryFn: api.routeHistory, refetchInterval: POLL.overview });

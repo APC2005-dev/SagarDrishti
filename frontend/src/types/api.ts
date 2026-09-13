@@ -634,3 +634,110 @@ export interface SeaIceStatus {
   recentEvaluations: SeaIceEvaluation[];
   recentRuns: SeaIceRun[];
 }
+
+/* --- Route planning: ports (NGA WPI) and computed routes ------------------ */
+
+export interface PortSummary {
+  id: number;
+  identifier: string;
+  name: string;
+  countryName: string | null;
+  regionName: string | null;
+  unlocode: string | null;
+  latitude: number;
+  longitude: number;
+  source: string;
+  inRoutingDomain: boolean;
+}
+
+export interface RouteWaypoint {
+  waypoint: number;
+  elapsedHours: number;
+  arrivalTime: string;
+  latitude: number;
+  longitude: number;
+  action: string;
+}
+
+export interface RouteEndpoint {
+  port: PortSummary;
+  requestedLatitude: number;
+  requestedLongitude: number;
+  resolvedLatitude: number | null;
+  resolvedLongitude: number | null;
+  connectorKm: number | null;
+}
+
+export interface RouteMetrics {
+  distanceKm: number | null;
+  durationHours: number | null;
+  /** Dimensionless relative proxy — not litres or tonnes. */
+  fuelProxy: number | null;
+  /** Concentration-weighted hours — not a collision probability. */
+  sicExposureHours: number | null;
+  weightedObjective: number | null;
+}
+
+export interface RouteCurvature {
+  routeLengthKm: number;
+  gridEndpointGeodesicKm: number;
+  detourRatio: number | null;
+  extraDistanceVsGridGeodesicKm: number;
+  extraDistanceVsGridGeodesicPct: number | null;
+  totalAbsoluteTurnDeg: number;
+  maximumTurnDeg: number;
+  maximumDiscreteCurvatureRadPerKm: number;
+  totalTurnRadiansPerRouteKm: number;
+  removedStationaryWaypoints: number;
+  curvatureDefinition: string;
+  detourDefinition: string;
+  requestedEndpointGeodesicKm?: number;
+  requestedEndpointConnectorsValidated?: boolean;
+  [key: string]: unknown;
+}
+
+export interface Route {
+  routeId: string;
+  status: string;
+  errorCode: string | null;
+  errorMessage: string | null;
+  departure: RouteEndpoint;
+  destination: RouteEndpoint;
+  connectorsValidated: boolean | null;
+  modelVersions: { trajectory: string | null; seaIce: string | null; routePlanner: string };
+  trajectoryForecastRunId: number | null;
+  seaIceForecastRunId: number | null;
+  forecastReferenceTime: string | null;
+  metrics: RouteMetrics;
+  /** Status only: no calibrated route-safety probability is claimed. */
+  confidence: { status: string; percent: null };
+  curvature: RouteCurvature | null;
+  waypoints: RouteWaypoint[];
+  geometry: { type: string; coordinates: number[][] } | null;
+  environmentSnapshot: Record<string, unknown> | null;
+  expansions: number | null;
+  runtimeSeconds: number | null;
+  createdAt: string;
+}
+
+export interface RouteSummaryRow {
+  routeId: string;
+  status: string;
+  departureName: string;
+  destinationName: string;
+  distanceKm: number | null;
+  durationHours: number | null;
+  fuelProxy: number | null;
+  sicExposureHours: number | null;
+  trajectoryModelVersion: string | null;
+  seaIceModelVersion: string | null;
+  routePlannerVersion: string;
+  confidenceStatus: string;
+  forecastReferenceTime: string | null;
+  createdAt: string;
+}
+
+export interface ApiErrorDetail {
+  code: string;
+  message: string;
+}

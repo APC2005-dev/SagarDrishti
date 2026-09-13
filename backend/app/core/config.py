@@ -82,6 +82,35 @@ class Settings(BaseSettings):
     cds_api_key: SecretStr | None = Field(None, validation_alias=AliasChoices("CDSAPI_KEY", "CDS_API_KEY"))
     cds_api_url: str = Field("https://cds.climate.copernicus.eu/api", validation_alias=AliasChoices("CDSAPI_URL", "CDS_API_URL"))
 
+    # --- route planning --------------------------------------------------------
+    # Ports are resolved against the NGA World Port Index (authoritative). The
+    # browser never contacts NGA: the backend caches the index in routing.ports.
+    routing_enabled: bool = True
+    wpi_api_url: str = "https://msi.nga.mil/api/publications/world-port-index"
+    wpi_timeout_seconds: float = 120.0
+    wpi_refresh_after_days: float = 30.0
+    # Supported routing domain (the route notebook's regional grid): west, east,
+    # south, north. Ports outside it are rejected rather than silently clamped.
+    # Scotia Sea / Antarctic Peninsula. Wider than the route notebook's Weddell
+    # demo box (-65..-30, -75..-55): that box contains only ports that are
+    # ice-locked or geometrically enclosed at 0.5 deg, so nothing in it is
+    # routable. This domain reaches the South Georgia and South Orkney ports.
+    routing_domain_west: float = -70.0
+    routing_domain_east: float = -30.0
+    routing_domain_south: float = -63.0
+    routing_domain_north: float = -53.0
+    # A port whose own cell is blocked may be connected to the nearest navigable
+    # cell, but only within this distance and only if the connector is checked.
+    routing_max_connector_km: float = 90.0
+    # The notebook used 180 s for a ~590 km regional demo; the production domain
+    # is larger, so the bound is raised. The search is still strictly bounded and
+    # returns ROUTE_ENGINE_TIMEOUT rather than hanging.
+    route_max_runtime_seconds: float = 900.0
+    # The notebook's 60k expansions suited its shorter demo voyage; a
+    # basin-crossing route needs a larger budget. Still a hard bound: the
+    # search returns ROUTE_ENGINE_TIMEOUT rather than running forever.
+    route_max_expansions: int = 400_000
+
     # --- paths -----------------------------------------------------------------
     raw_data_dir: Path = REPO_ROOT / "data" / "raw"
     models_dir: Path = REPO_ROOT / "models"

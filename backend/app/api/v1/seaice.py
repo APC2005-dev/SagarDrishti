@@ -87,7 +87,10 @@ def status(settings: SettingsDep) -> SeaIceStatus:
         count = int(session.execute(select(func.count()).select_from(SeaIceObservation)).scalar_one())
         entries = list(
             session.execute(
-                select(SeaIceObservation).order_by(SeaIceObservation.observation_date.desc()).limit(WINDOW)
+                select(SeaIceObservation)
+                .where(SeaIceObservation.n_valid_cells > 0)
+                .order_by(SeaIceObservation.observation_date.desc())
+                .limit(WINDOW)
             ).scalars()
         )[::-1]
         latest = entries[-1] if entries else None
@@ -102,8 +105,14 @@ def status(settings: SettingsDep) -> SeaIceStatus:
                 f"{WINDOW} chronological entries are required to build an input sequence"
             )
 
+        # Only forecast sets anchored on an observation that actually carries data:
+        # a set built from an empty source field has no field to show.
         newest_set = session.execute(
-            select(SeaIceForecastSet).order_by(SeaIceForecastSet.anchor_date.desc(), SeaIceForecastSet.id.desc()).limit(1)
+            select(SeaIceForecastSet)
+            .join(SeaIceObservation, SeaIceForecastSet.anchor_observation_id == SeaIceObservation.id)
+            .where(SeaIceObservation.n_valid_cells > 0)
+            .order_by(SeaIceForecastSet.anchor_date.desc(), SeaIceForecastSet.id.desc())
+            .limit(1)
         ).scalar_one_or_none()
         forecasts: list[SeaIceForecastOut] = []
         if newest_set is not None:
@@ -176,7 +185,10 @@ def latest(
 ) -> SeaIceField:
     with Session(sync_engine()) as session:
         observation = session.execute(
-            select(SeaIceObservation).order_by(SeaIceObservation.observation_date.desc()).limit(1)
+            select(SeaIceObservation)
+            .where(SeaIceObservation.n_valid_cells > 0)
+            .order_by(SeaIceObservation.observation_date.desc())
+            .limit(1)
         ).scalar_one_or_none()
         if observation is None:
             raise HTTPException(404, "no official sea-ice observation stored (run: python -m app.cli seaice-ingest)")
@@ -209,7 +221,8 @@ def forecast(
         row = session.execute(
             select(SeaIceForecast, SeaIceForecastSet)
             .join(SeaIceForecastSet, SeaIceForecast.forecast_set_id == SeaIceForecastSet.id)
-            .where(SeaIceForecast.horizon_days == horizon)
+            .join(SeaIceObservation, SeaIceForecastSet.anchor_observation_id == SeaIceObservation.id)
+            .where(SeaIceForecast.horizon_days == horizon, SeaIceObservation.n_valid_cells > 0)
             .order_by(SeaIceForecastSet.anchor_date.desc(), SeaIceForecastSet.id.desc())
             .limit(1)
         ).first()
