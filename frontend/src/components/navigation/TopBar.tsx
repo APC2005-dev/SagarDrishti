@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
+import logoImg from '../../assets/logo.jpg';
+
 import { CRS } from '../../constants';
 import { useIngestion } from '../../hooks/queries';
 import { relTime } from '../../utils/format';
@@ -86,8 +88,8 @@ export function TopBar() {
         </button>
 
         <div className="brand">
-          <span className="brand-mark" aria-hidden>
-            ◇
+          <span className="brand-mark" aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src={logoImg} alt="Sagar Drishti Logo" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
           </span>
           <span className="brand-name">SAGAR DRISHTI</span>
           <span className="brand-sub mono">ANTARCTIC ICEBERG INTELLIGENCE · v1.0</span>
