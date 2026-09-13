@@ -7,7 +7,6 @@ const LABELS: { key: keyof MapLayers; label: string; env?: 'wind' | 'current' | 
   { key: 'forecast', label: 'FORECAST' },
   { key: 'wind', label: 'WIND', env: 'wind' },
   { key: 'current', label: 'CURRENT', env: 'current' },
-  { key: 'seaIce', label: 'SEA ICE', env: 'sea_ice' },
 ];
 
 function EnvToggle({ k, label, group }: { k: keyof MapLayers; label: string; group: 'wind' | 'current' | 'sea_ice' }) {

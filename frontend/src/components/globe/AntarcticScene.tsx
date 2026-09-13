@@ -105,7 +105,7 @@ function Legend({ hasForecasts }: { hasForecasts: boolean }) {
               <span className="legend-swatch sw-history" />
               Past track (selected)
             </div>
-            <div className="legend-row dim">Wind / current / sea ice: analysis fields (toggle, bottom right)</div>
+            <div className="legend-row dim">Wind / current: analysis fields (toggle, bottom right)</div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -38,7 +38,7 @@ export const OVERVIEW_WIDGETS: OverviewWidget[] = [
     render: (o) => (
       <div className="grid-tiles">
         <Metric label="Latest USNIC update" value={fmtDate(o.latestUsnicUpdate)} tone="official" />
-        <Metric label="Last backend sync" value={relTime(o.lastSyncAt)} />
+        <Metric label="Last sync" value={relTime(o.lastSyncAt)} />
         <Metric label="New obs. last run" value={fmtNum(o.newObservationsLastRun)} />
         <div className="metric">
           <span className="label">Feed state</span>
