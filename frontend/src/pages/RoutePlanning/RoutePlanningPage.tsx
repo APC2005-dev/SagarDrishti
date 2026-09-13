@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { api, errorParts } from '../../api/client';
 import { Metric, SectionTitle } from '../../components/common/Metric';
@@ -143,14 +143,7 @@ export default function RoutePlanningPage() {
     },
   });
 
-  // Automatically pre-populate departure, destination inputs and display active route result
-  useEffect(() => {
-    if (persisted.data) {
-      if (!departure) setDeparture(persisted.data.departure.port);
-      if (!destination) setDestination(persisted.data.destination.port);
-      setRestored(true);
-    }
-  }, [persisted.data]);
+  const resumable = !shown && !plan.isPending ? (persisted.data ?? null) : null;
 
   // Fly the camera to the middle of the shown route. A 33 km hop is a few
   // pixels on a whole-continent view, so without this a short route is
@@ -229,12 +222,6 @@ export default function RoutePlanningPage() {
             )}
           </div>
 
-          {shown && !plan.isPending && (
-            <div style={{ marginBottom: 12 }}>
-              <ResultCard route={shown} />
-            </div>
-          )}
-
           <div className="panel card">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <PortInput label="Departure port" value={departure} onChange={setDeparture} disabled={plan.isPending} />
@@ -281,6 +268,32 @@ export default function RoutePlanningPage() {
               </div>
             </div>
           </div>
+
+          {resumable && !shown && (
+            <div className="note" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+              <span>
+                Last voyage on record: <strong>{resumable.departure.port.name}</strong> →{' '}
+                <strong>{resumable.destination.port.name}</strong>
+              </span>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setDeparture(resumable.departure.port);
+                  setDestination(resumable.destination.port);
+                  setRestored(true);
+                }}
+              >
+                Load it
+              </button>
+            </div>
+          )}
+
+          {shown && !plan.isPending && (
+            <div style={{ marginTop: 16 }}>
+              <ResultCard route={shown} />
+            </div>
+          )}
 
           {plan.isPending && (
             <div className="note" style={{ marginTop: 12 }}>

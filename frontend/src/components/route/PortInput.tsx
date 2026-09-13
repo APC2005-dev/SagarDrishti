@@ -37,7 +37,7 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
 
   useEffect(() => {
     const query = text.trim();
-    if (!open || query.length < 2) {
+    if (!open || query.length < 2 || (value && query === value.name)) {
       setSuggestions(null);
       setSearching(false);
       return;
@@ -59,7 +59,7 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
         });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [text, open, value?.name]);
+  }, [text, open, value]);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -76,15 +76,15 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
           value={text}
           disabled={disabled}
           onChange={(e) => {
-            setText(e.target.value);
+            const val = e.target.value;
+            setText(val);
             setOpen(true);
-            if (value) onChange(null); // typing invalidates a previous selection
+            if (value && val !== value.name) onChange(null); // typing invalidates a previous selection
           }}
-          onFocus={(e) => {
+          onFocus={() => {
             setOpen(true);
-            e.target.select();
           }}
-          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          onBlur={() => setTimeout(() => setOpen(false), 250)}
         />
         {value && !disabled && (
           <button
@@ -102,6 +102,7 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
               padding: 0,
             }}
             title="Clear port selection"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               onChange(null);
               setText('');
@@ -122,7 +123,7 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
           {invalidMessage}
         </div>
       )}
-      {open && text.trim().length >= 2 && (
+      {open && !value && text.trim().length >= 2 && (
         <div
           className="glass"
           style={{ position: 'absolute', zIndex: 40, left: 0, right: 0, marginTop: 4, padding: 4, maxHeight: 260, overflowY: 'auto' }}
