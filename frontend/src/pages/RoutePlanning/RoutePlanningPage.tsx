@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { api, errorParts } from '../../api/client';
-import { Metric, SectionTitle } from '../../components/common/Metric';
+import { Metric } from '../../components/common/Metric';
 import { ResizeHandle } from '../../components/common/ResizeHandle';
 import { Chip } from '../../components/common/StatusChip';
 import { AntarcticScene } from '../../components/globe/AntarcticScene';
@@ -13,7 +13,6 @@ import { useActiveRouteDetail, useIcebergs, useLatestForecasts } from '../../hoo
 import { useResizableSidebar } from '../../hooks/useResizableSidebar';
 import type { PortSummary, Route } from '../../types/api';
 import { toScene } from '../../utils/projection';
-import { fmtDateTime } from '../../utils/format';
 
 /**
  * Two real World Port Index ports in, one time-dependent A* route out.
@@ -66,7 +65,6 @@ function hoursLabel(hours: number | null | undefined): string {
 }
 
 function ResultCard({ route }: { route: Route }) {
-  const curvature = route.curvature;
   const num = (v: number | null | undefined, digits: number) =>
     typeof v === 'number' && Number.isFinite(v) ? v.toFixed(digits) : '—';
   return (
@@ -82,34 +80,7 @@ function ResultCard({ route }: { route: Route }) {
         <Metric label="Travel duration" value={hoursLabel(route.metrics.durationHours)} />
         <Metric label="Fuel proxy" value={num(route.metrics.fuelProxy, 2)} sub="relative, not litres" />
         <Metric label="SIC exposure" value={num(route.metrics.sicExposureHours, 2)} sub="concentration-hours" />
-        <Metric label="Route confidence" value="Not calibrated" sub="no calibrated probability" />
         <Metric label="Weighted objective" value={num(route.metrics.weightedObjective, 4)} />
-      </div>
-      {curvature && (
-        <>
-          <SectionTitle>Curvature (from the route geometry)</SectionTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-            <Metric label="Maximum turn" value={num(curvature.maximumTurnDeg, 2)} unit="°" />
-            <Metric label="Max curvature" value={num(curvature.maximumDiscreteCurvatureRadPerKm, 5)} unit="rad/km" />
-            <Metric label="Detour ratio" value={num(curvature.detourRatio, 4)} />
-            <Metric label="Total turning" value={num(curvature.totalAbsoluteTurnDeg, 1)} unit="°" />
-          </div>
-          <div className="dim" style={{ fontSize: 11, marginTop: 8 }}>{curvature.curvatureDefinition}</div>
-        </>
-      )}
-      <SectionTitle>Provenance</SectionTitle>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-        <Metric label="Trajectory model" value={route.modelVersions.trajectory ?? '—'} />
-        <Metric label="Sea-ice model" value={route.modelVersions.seaIce ?? '—'} />
-        <Metric label="Route planner" value={route.modelVersions.routePlanner} />
-        <Metric
-          label="Forecast reference"
-          value={route.forecastReferenceTime ? fmtDateTime(route.forecastReferenceTime) : '—'}
-        />
-      </div>
-      <div className="dim mono" style={{ fontSize: 11, marginTop: 8 }}>
-        {route.routeId} · {route.waypoints?.length ?? 0} waypoints · {route.expansions ?? 0} states expanded · connectors{' '}
-        {route.connectorsValidated ? 'validated' : 'not validated'}
       </div>
     </div>
   );
@@ -135,6 +106,10 @@ export default function RoutePlanningPage() {
 
   const plan = useMutation({
     mutationFn: () => api.planRoute(departure!.identifier, destination!.identifier, maxSic),
+    onMutate: () => {
+      setRoute(null);
+      setRestored(false);
+    },
     onSuccess: (result) => {
       setRestored(false);
       setRoute(result);
@@ -352,7 +327,7 @@ export default function RoutePlanningPage() {
             </div>
           )}
 
-          <RouteScanner active={plan.isPending} />
+          <RouteScanner active={plan.isPending} onCancel={() => plan.reset()} />
           <AntarcticScene
             icebergs={icebergs.data?.items ?? []}
             forecasts={forecasts.data ?? []}
@@ -360,7 +335,7 @@ export default function RoutePlanningPage() {
             riskMode="all"
             showHistory={false}
             focusOverride={routeFocus}
-            sceneChildren={shown?.waypoints?.length ? <RouteLayer waypoints={shown.waypoints} /> : null}
+            sceneChildren={!plan.isPending && shown?.waypoints?.length ? <RouteLayer waypoints={shown.waypoints} /> : null}
           />
         </section>
       )}
