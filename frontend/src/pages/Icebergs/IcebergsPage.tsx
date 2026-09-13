@@ -17,8 +17,6 @@ export default function IcebergsPage() {
   const selected = useUi((s) => s.selectedIcebergId);
   const horizon = useUi((s) => s.horizon);
   const setHorizon = useUi((s) => s.setHorizon);
-  const riskCones = useUi((s) => s.riskCones);
-  const setRiskCones = useUi((s) => s.setRiskCones);
   const [filter, setFilter] = useState('');
   const q = useDeferredValue(filter.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
 

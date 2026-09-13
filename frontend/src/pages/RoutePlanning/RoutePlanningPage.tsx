@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { api, errorParts } from '../../api/client';
 import { Metric, SectionTitle } from '../../components/common/Metric';
@@ -44,7 +44,6 @@ const ERROR_HELP: Record<string, string> = {
     + 'and use "Show it" if a voyage was recorded.',
 };
 
-const HORIZONS = [1, 2, 3] as const;
 
 /**
  * Vessel ice capability: the highest sea-ice concentration the ship may transit.
@@ -122,7 +121,7 @@ export default function RoutePlanningPage() {
 
   const [departure, setDeparture] = useState<PortSummary | null>(null);
   const [destination, setDestination] = useState<PortSummary | null>(null);
-  const [horizon, setHorizon] = useState<number>(3);
+  const [horizon] = useState<number>(3);
   const [maxSic, setMaxSic] = useState<number>(0.3);
   const [route, setRoute] = useState<Route | null>(null);
   // The page opens as an empty form: a route is shown only once THIS visit has
@@ -144,6 +143,15 @@ export default function RoutePlanningPage() {
     },
   });
 
+  // Automatically pre-populate departure, destination inputs and display active route result
+  useEffect(() => {
+    if (persisted.data) {
+      if (!departure) setDeparture(persisted.data.departure.port);
+      if (!destination) setDestination(persisted.data.destination.port);
+      setRestored(true);
+    }
+  }, [persisted.data]);
+
   // Fly the camera to the middle of the shown route. A 33 km hop is a few
   // pixels on a whole-continent view, so without this a short route is
   // technically drawn but effectively invisible.
@@ -154,8 +162,6 @@ export default function RoutePlanningPage() {
     return mid ? toScene(mid.latitude, mid.longitude) : null;
   }, [shown]);
 
-  // A previous voyage the user can choose to bring back, never auto-drawn.
-  const resumable = !shown && !plan.isPending ? (persisted.data ?? null) : null;
   const failure = plan.isError ? errorParts(plan.error) : null;
   const samePort = !!departure && !!destination && departure.id === destination.id;
   const canSubmit = !!departure && !!destination && !samePort && !plan.isPending;
@@ -223,6 +229,12 @@ export default function RoutePlanningPage() {
             )}
           </div>
 
+          {shown && !plan.isPending && (
+            <div style={{ marginBottom: 12 }}>
+              <ResultCard route={shown} />
+            </div>
+          )}
+
           <div className="panel card">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <PortInput label="Departure port" value={departure} onChange={setDeparture} disabled={plan.isPending} />
@@ -270,18 +282,6 @@ export default function RoutePlanningPage() {
             </div>
           </div>
 
-          {resumable && (
-            <div className="note" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-              <span>
-                Last voyage on record: <strong>{resumable.departure.port.name}</strong> →{' '}
-                <strong>{resumable.destination.port.name}</strong>
-              </span>
-              <button type="button" className="btn" onClick={() => setRestored(true)}>
-                Show it
-              </button>
-            </div>
-          )}
-
           {plan.isPending && (
             <div className="note" style={{ marginTop: 12 }}>
               Assembling the forecast snapshot and running the route search. The first request for a forecast window
@@ -298,12 +298,6 @@ export default function RoutePlanningPage() {
               <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
                 {(failure.code && ERROR_HELP[failure.code]) ?? failure.message}
               </p>
-            </div>
-          )}
-
-          {shown && !plan.isPending && (
-            <div style={{ marginTop: 12 }}>
-              <ResultCard route={shown} />
             </div>
           )}
         </section>
@@ -352,26 +346,6 @@ export default function RoutePlanningPage() {
             focusOverride={routeFocus}
             sceneChildren={shown?.waypoints?.length ? <RouteLayer waypoints={shown.waypoints} /> : null}
           />
-
-          <div className="map-overlay" style={{ top: 14, left: 14 }}>
-            <div className="segmented" role="radiogroup" aria-label="Forecast horizon">
-              {HORIZONS.map((h) => (
-                <button
-                  key={h}
-                  role="radio"
-                  aria-checked={horizon === h}
-                  className={`seg${horizon === h ? ' active' : ''}`}
-                  onClick={() => setHorizon(h)}
-                >
-                  <span className="seg-text mono">D+{h}</span>
-                </button>
-              ))}
-            </div>
-            <div className="dim mono" style={{ fontSize: 10, marginTop: 4, maxWidth: 250 }}>
-              Iceberg hazards are the GRU&apos;s own D+{horizon}. Sea ice is modelled at D+1/D+3/D+7; D+2 is
-              interpolated between them, never a direct model output.
-            </div>
-          </div>
         </section>
       )}
     </div>

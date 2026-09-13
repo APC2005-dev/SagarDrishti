@@ -91,12 +91,16 @@ function Legend({ hasForecasts }: { hasForecasts: boolean }) {
                   <span className="legend-swatch sw-line" />
                   Forecast trajectory
                 </div>
-                <div className="legend-row">
-                  <span className="legend-swatch sw-risk" />
-                  p90 error radius
-                </div>
               </>
             )}
+            <div className="legend-row">
+              <span className="legend-swatch sw-dep-port" />
+              Departure port
+            </div>
+            <div className="legend-row">
+              <span className="legend-swatch sw-dest-port" />
+              Destination port
+            </div>
             <div className="legend-row">
               <span className="legend-swatch sw-history" />
               Past track (selected)

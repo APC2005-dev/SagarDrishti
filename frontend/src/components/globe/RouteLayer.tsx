@@ -19,9 +19,9 @@ import { MARKER_Y } from './IcebergLayer';
  */
 
 const ROUTE_Y = MARKER_Y - 0.004;
-const ROUTE_COLOUR = '#5fc79a';
-const DEPARTURE_COLOUR = '#00e5ff';
-const DESTINATION_COLOUR = '#ff9f45';
+const ROUTE_COLOUR = '#9184d9';
+const DEPARTURE_COLOUR = '#10b981';
+const DESTINATION_COLOUR = '#ec4899';
 /** Seconds of wall clock per hour of voyage — the whole voyage replays smoothly. */
 const REPLAY_SECONDS_PER_HOUR = 0.05;
 

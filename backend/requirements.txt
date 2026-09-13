@@ -13,3 +13,6 @@ celery[redis]>=5.4
 redis>=5.2
 httpx>=0.28
 structlog>=24.4
+copernicusmarine
+shapely
+cartopy

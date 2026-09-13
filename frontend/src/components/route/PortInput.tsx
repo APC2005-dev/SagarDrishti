@@ -37,7 +37,7 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
 
   useEffect(() => {
     const query = text.trim();
-    if (!open || query.length < 2 || query === value?.name) {
+    if (!open || query.length < 2) {
       setSuggestions(null);
       setSearching(false);
       return;
@@ -66,22 +66,52 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
       <label className="label" htmlFor={inputId} style={{ display: 'block', marginBottom: 4 }}>
         {label}
       </label>
-      <input
-        id={inputId}
-        className="input mono"
-        style={{ width: '100%' }}
-        autoComplete="off"
-        placeholder="Type a port name…"
-        value={text}
-        disabled={disabled}
-        onChange={(e) => {
-          setText(e.target.value);
-          setOpen(true);
-          if (value) onChange(null); // typing invalidates a previous selection
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-      />
+      <div style={{ position: 'relative' }}>
+        <input
+          id={inputId}
+          className="input mono"
+          style={{ width: '100%', paddingRight: value ? 28 : 12 }}
+          autoComplete="off"
+          placeholder="Type a port name…"
+          value={text}
+          disabled={disabled}
+          onChange={(e) => {
+            setText(e.target.value);
+            setOpen(true);
+            if (value) onChange(null); // typing invalidates a previous selection
+          }}
+          onFocus={(e) => {
+            setOpen(true);
+            e.target.select();
+          }}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+        />
+        {value && !disabled && (
+          <button
+            type="button"
+            style={{
+              position: 'absolute',
+              right: 8,
+              top: 7,
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-3)',
+              cursor: 'pointer',
+              fontSize: 14,
+              lineHeight: 1,
+              padding: 0,
+            }}
+            title="Clear port selection"
+            onClick={() => {
+              onChange(null);
+              setText('');
+              setOpen(true);
+            }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
       {value && (
         <div className="dim mono" style={{ fontSize: 11, marginTop: 4 }}>
           WPI {value.identifier} · {value.countryName} · {value.latitude.toFixed(3)}, {value.longitude.toFixed(3)}
@@ -92,7 +122,7 @@ export function PortInput({ label, value, onChange, disabled, invalidMessage }: 
           {invalidMessage}
         </div>
       )}
-      {open && !value && text.trim().length >= 2 && (
+      {open && text.trim().length >= 2 && (
         <div
           className="glass"
           style={{ position: 'absolute', zIndex: 40, left: 0, right: 0, marginTop: 4, padding: 4, maxHeight: 260, overflowY: 'auto' }}
