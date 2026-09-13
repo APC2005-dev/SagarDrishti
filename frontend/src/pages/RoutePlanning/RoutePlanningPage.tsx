@@ -8,6 +8,7 @@ import { Chip } from '../../components/common/StatusChip';
 import { AntarcticScene } from '../../components/globe/AntarcticScene';
 import { RouteLayer } from '../../components/globe/RouteLayer';
 import { PortInput } from '../../components/route/PortInput';
+import { RouteScanner } from '../../components/route/RouteScanner';
 import { useActiveRouteDetail, useIcebergs, useLatestForecasts } from '../../hooks/queries';
 import { useResizableSidebar } from '../../hooks/useResizableSidebar';
 import type { PortSummary, Route } from '../../types/api';
@@ -350,6 +351,7 @@ export default function RoutePlanningPage() {
             </div>
           )}
 
+          <RouteScanner active={plan.isPending} />
           <AntarcticScene
             icebergs={icebergs.data?.items ?? []}
             forecasts={forecasts.data ?? []}
