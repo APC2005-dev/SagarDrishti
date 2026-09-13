@@ -67,9 +67,9 @@ export default function IcebergsPage() {
           style={
             isMobile
               ? {
-                  height: layoutMode === 'content' ? '100%' : `${sidebarHeight}px`,
-                  flexShrink: 0,
-                }
+                height: layoutMode === 'content' ? '100%' : `${sidebarHeight}px`,
+                flexShrink: 0,
+              }
               : undefined
           }
         >
@@ -147,10 +147,10 @@ export default function IcebergsPage() {
           style={
             isMobile
               ? {
-                  flex: 1,
-                  minHeight: 0,
-                  height: layoutMode === 'map' ? '100%' : 'auto',
-                }
+                flex: 1,
+                minHeight: 0,
+                height: layoutMode === 'map' ? '100%' : 'auto',
+              }
               : undefined
           }
         >
@@ -169,13 +169,13 @@ export default function IcebergsPage() {
           <AntarcticScene icebergs={icebergs.data?.items ?? []} forecasts={forecasts.data ?? []} horizon={horizon}>
             <div className="map-overlay map-controls">
               <HorizonSelector value={horizon} onChange={setHorizon} />
-              <div className="segmented" role="radiogroup" aria-label="Risk radius display">
+              {/* <div className="segmented" role="radiogroup" aria-label="Risk radius display">
                 {(['selected', 'all', 'off'] as const).map((m) => (
                   <button key={m} className={`btn-ghost${riskCones === m ? ' active' : ''}`} onClick={() => setRiskCones(m)}>
                     P90 {m.toUpperCase()}
                   </button>
                 ))}
-              </div>
+              </div> */}
             </div>
           </AntarcticScene>
 
