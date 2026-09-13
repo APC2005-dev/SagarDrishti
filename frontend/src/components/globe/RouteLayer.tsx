@@ -31,17 +31,38 @@ interface Props {
   destinationName?: string;
 }
 
-function Endpoint({ position, colour }: { position: [number, number]; colour: string }) {
+/**
+ * Marker size is derived from the route's own extent. One scene unit is 1000 km,
+ * so a fixed 0.05 marker is a 50 km blob: on a 33 km voyage that is larger than
+ * the whole route and the two endpoints merge into one dot. Scaling with the
+ * route keeps departure and destination separable at any length.
+ */
+function markerRadius(extentSceneUnits: number): number {
+  // The lower bound is a visibility floor: below ~12 km a marker is sub-pixel on
+  // a whole-continent view. The upper bound stops a basin crossing from being
+  // capped by two huge blobs.
+  return Math.min(0.035, Math.max(0.012, extentSceneUnits * 0.25));
+}
+
+function Endpoint({
+  position,
+  colour,
+  radius,
+}: {
+  position: [number, number];
+  colour: string;
+  radius: number;
+}) {
   const [x, z] = position;
   return (
     <group position={[x, ROUTE_Y + 0.002, z]}>
       <mesh>
-        <sphereGeometry args={[0.05, 20, 20]} />
+        <sphereGeometry args={[radius, 20, 20]} />
         <meshBasicMaterial color={colour} toneMapped={false} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.07, 0.095, 32]} />
-        <meshBasicMaterial color={colour} toneMapped={false} transparent opacity={0.8} side={THREE.DoubleSide} />
+        <ringGeometry args={[radius * 1.5, radius * 2.1, 32]} />
+        <meshBasicMaterial color={colour} toneMapped={false} transparent opacity={0.85} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
@@ -88,16 +109,22 @@ export function RouteLayer({ waypoints }: Props) {
   if (points.length < 2) return null;
   const first = points[0]!;
   const last = points[points.length - 1]!;
+  // Longest span the route actually covers, so a short hop is not drawn with
+  // markers sized for a basin crossing.
+  let extent = 0;
+  for (const [x, z] of points) extent = Math.max(extent, Math.hypot(x - first[0], z - first[1]));
+  extent = Math.max(extent, Math.hypot(last[0] - first[0], last[1] - first[1]));
+  const radius = markerRadius(extent);
 
   return (
     <group>
       <lineSegments geometry={lineGeometry}>
         <lineBasicMaterial color={ROUTE_COLOUR} toneMapped={false} transparent opacity={0.95} />
       </lineSegments>
-      <Endpoint position={first} colour={DEPARTURE_COLOUR} />
-      <Endpoint position={last} colour={DESTINATION_COLOUR} />
+      <Endpoint position={first} colour={DEPARTURE_COLOUR} radius={radius} />
+      <Endpoint position={last} colour={DESTINATION_COLOUR} radius={radius} />
       <mesh ref={vessel}>
-        <coneGeometry args={[0.035, 0.09, 12]} />
+        <coneGeometry args={[radius * 0.8, radius * 2, 12]} />
         <meshBasicMaterial color="#ffffff" toneMapped={false} />
       </mesh>
     </group>

@@ -29,6 +29,12 @@ import type {
 
 const BASE = '/api/v1';
 const TIMEOUT_MS = 20_000;
+/**
+ * Route planning runs a bounded A* search server-side. This must comfortably
+ * outlast ROUTE_MAX_RUNTIME_SECONDS (900 s) or the browser aborts a search
+ * that was going to succeed and reports it as a connection failure.
+ */
+const ROUTE_TIMEOUT_MS = 960_000;
 
 export class ApiError extends Error {
   constructor(
@@ -78,9 +84,13 @@ async function get<T>(path: string, params?: Params): Promise<T> {
  * budget than a read. Backend failures carry `{code, message}` in `detail`; the
  * code is preserved in `ApiError.detail` so the UI can explain it.
  */
-async function post<T>(path: string, body: unknown, timeoutMs = 240_000): Promise<T> {
+async function post<T>(path: string, body: unknown, timeoutMs = ROUTE_TIMEOUT_MS): Promise<T> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, timeoutMs);
   let res: Response;
   try {
     res = await fetch(`${BASE}${path}`, {
@@ -90,7 +100,11 @@ async function post<T>(path: string, body: unknown, timeoutMs = 240_000): Promis
       body: JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, 'backend unreachable', null);
+    // Aborting on our own timer is not the same failure as the backend being
+    // down, and saying "unreachable" for a slow search is simply wrong.
+    throw timedOut
+      ? new ApiError(0, `CLIENT_TIMEOUT|The request exceeded ${Math.round(timeoutMs / 1000)} s in the browser.`, null)
+      : new ApiError(0, 'backend unreachable', null);
   } finally {
     clearTimeout(timer);
   }

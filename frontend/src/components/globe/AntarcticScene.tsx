@@ -30,6 +30,8 @@ interface Props {
   children?: React.ReactNode;
   /** Extra 3D layers rendered INSIDE the canvas, where R3F hooks work. */
   sceneChildren?: React.ReactNode;
+  /** Fly the camera here instead of to the selected iceberg (scene X/Z). */
+  focusOverride?: [number, number] | null;
 }
 
 function Legend({ hasForecasts }: { hasForecasts: boolean }) {
@@ -117,6 +119,7 @@ export function AntarcticScene({
   showLayerToggles = true,
   children,
   sceneChildren,
+  focusOverride = null,
 }: Props) {
   const selectedId = useUi((s) => s.selectedIcebergId);
   const hoveredId = useUi((s) => s.hoveredIcebergId);
@@ -146,7 +149,11 @@ export function AntarcticScene({
     [icebergs],
   );
   const selected = plottable.find((b) => b.icebergId === selectedId);
-  const focus = useMemo(() => (selected ? toScene(selected.latitude, selected.longitude) : null), [selected]);
+  const selectedFocus = useMemo(
+    () => (selected ? toScene(selected.latitude, selected.longitude) : null),
+    [selected],
+  );
+  const focus = focusOverride ?? selectedFocus;
 
   return (
     <div className="scene-root" style={{ position: 'absolute', inset: 0 }}>

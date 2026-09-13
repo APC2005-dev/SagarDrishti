@@ -70,14 +70,81 @@ function toShapePoints(ring: [number, number][]): THREE.Vector2[] {
   return ring.map(([x, z]) => new THREE.Vector2(x, -z));
 }
 
+/** Everything the atlas holds, fetched once and shared by both loaders. */
+let atlasCache: Promise<FeatureCollection> | null = null;
+
+function loadAtlas(): Promise<FeatureCollection> {
+  atlasCache ??= (async () => {
+    const res = await fetch(atlasUrl);
+    if (!res.ok) throw new Error(`coastline data HTTP ${res.status}`);
+    const topo = (await res.json()) as Topology;
+    return feature(topo, topo.objects.countries as GeometryCollection) as FeatureCollection;
+  })();
+  atlasCache.catch(() => {
+    atlasCache = null;
+  });
+  return atlasCache;
+}
+
+function buildGeometry(features: Feature[]): LandGeometry {
+  const shapes: THREE.Shape[] = [];
+  const outlines: [number, number][][] = [];
+  for (const f of features) {
+    const geom = f.geometry as Polygon | MultiPolygon;
+    const polygons: Position[][][] = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+    for (const poly of polygons) {
+      const planar = planarPolygon(poly);
+      if (!planar) continue;
+      const shape = new THREE.Shape(toShapePoints(planar.outer));
+      for (const h of planar.holes) shape.holes.push(new THREE.Path(toShapePoints(h)));
+      shapes.push(shape);
+      outlines.push(planar.outer, ...planar.holes);
+    }
+  }
+  return { shapes, outlines };
+}
+
+function maxLatitude(f: Feature): number {
+  let top = -90;
+  const walk = (c: unknown): void => {
+    if (Array.isArray(c) && typeof c[0] === 'number') top = Math.max(top, c[1] as number);
+    else if (Array.isArray(c)) c.forEach(walk);
+  };
+  walk((f.geometry as Polygon | MultiPolygon).coordinates);
+  return top;
+}
+
+/**
+ * Sub-Antarctic islands: every atlas feature lying entirely south of 45°S,
+ * excluding Antarctica itself. That is a rule rather than a hand-picked list —
+ * it currently yields South Georgia & the South Sandwich Islands, the Falklands,
+ * the French Southern Lands and Heard Island.
+ *
+ * Without these, a real port on one of them (Grytviken, Stromness Harbor …)
+ * renders over open water because the island it sits on was never drawn.
+ */
+const SOUTHERN_ISLAND_MAX_LAT = -45;
+let islandCache: Promise<LandGeometry> | null = null;
+
+export function loadSouthernIslands(): Promise<LandGeometry> {
+  islandCache ??= (async () => {
+    const countries = await loadAtlas();
+    const islands = countries.features.filter(
+      (f: Feature) => String(f.id) !== '010' && f.geometry && maxLatitude(f) <= SOUTHERN_ISLAND_MAX_LAT,
+    );
+    return buildGeometry(islands);
+  })();
+  islandCache.catch(() => {
+    islandCache = null;
+  });
+  return islandCache;
+}
+
 let cache: Promise<LandGeometry> | null = null;
 
 export function loadAntarctica(): Promise<LandGeometry> {
   cache ??= (async () => {
-    const res = await fetch(atlasUrl);
-    if (!res.ok) throw new Error(`coastline data HTTP ${res.status}`);
-    const topo = (await res.json()) as Topology;
-    const countries = feature(topo, topo.objects.countries as GeometryCollection) as FeatureCollection;
+    const countries = await loadAtlas();
     const ant = countries.features.find(
       (f: Feature) => String(f.id) === '010' || (f.properties as { name?: string } | null)?.name === 'Antarctica',
     );

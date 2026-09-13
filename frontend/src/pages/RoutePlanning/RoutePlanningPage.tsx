@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { api, errorParts } from '../../api/client';
 import { Metric, SectionTitle } from '../../components/common/Metric';
@@ -11,6 +11,7 @@ import { PortInput } from '../../components/route/PortInput';
 import { useActiveRouteDetail, useIcebergs, useLatestForecasts } from '../../hooks/queries';
 import { useResizableSidebar } from '../../hooks/useResizableSidebar';
 import type { PortSummary, Route } from '../../types/api';
+import { toScene } from '../../utils/projection';
 import { fmtDateTime } from '../../utils/format';
 
 /**
@@ -38,6 +39,9 @@ const ERROR_HELP: Record<string, string> = {
   ROUTE_ENGINE_TIMEOUT: 'The search hit its time limit. This is not proof that no route exists.',
   NO_FEASIBLE_ROUTE: 'No feasible route exists under the current ice, iceberg and vessel constraints.',
   ROUTE_ENGINE_ERROR: 'The route engine failed.',
+  CLIENT_TIMEOUT:
+    'The browser gave up waiting. The search may still be running on the server — reopen this page shortly '
+    + 'and use "Show it" if a voyage was recorded.',
 };
 
 const HORIZONS = [1, 2, 3] as const;
@@ -121,14 +125,18 @@ export default function RoutePlanningPage() {
   const [horizon, setHorizon] = useState<number>(3);
   const [maxSic, setMaxSic] = useState<number>(0.3);
   const [route, setRoute] = useState<Route | null>(null);
-  // Refreshing the browser must not lose the voyage: the persisted active
-  // route is redrawn until a new search replaces it.
+  // The page opens as an empty form: a route is shown only once THIS visit has
+  // produced one. The backend still holds the last voyage, but restoring it is
+  // an explicit choice — auto-drawing it made the screen look like it always
+  // had the same two ports baked in.
+  const [restored, setRestored] = useState(false);
   const persisted = useActiveRouteDetail();
-  const shown = route ?? persisted.data ?? null;
+  const shown = route ?? (restored ? (persisted.data ?? null) : null);
 
   const plan = useMutation({
     mutationFn: () => api.planRoute(departure!.identifier, destination!.identifier, maxSic),
     onSuccess: (result) => {
+      setRestored(false);
       setRoute(result);
       // The Feeds active-vessel card reads persisted backend state, not this one.
       void queryClient.invalidateQueries({ queryKey: ['activeRoute'] });
@@ -136,6 +144,18 @@ export default function RoutePlanningPage() {
     },
   });
 
+  // Fly the camera to the middle of the shown route. A 33 km hop is a few
+  // pixels on a whole-continent view, so without this a short route is
+  // technically drawn but effectively invisible.
+  const routeFocus = useMemo<[number, number] | null>(() => {
+    const points = shown?.waypoints;
+    if (!points?.length) return null;
+    const mid = points[Math.floor(points.length / 2)];
+    return mid ? toScene(mid.latitude, mid.longitude) : null;
+  }, [shown]);
+
+  // A previous voyage the user can choose to bring back, never auto-drawn.
+  const resumable = !shown && !plan.isPending ? (persisted.data ?? null) : null;
   const failure = plan.isError ? errorParts(plan.error) : null;
   const samePort = !!departure && !!destination && departure.id === destination.id;
   const canSubmit = !!departure && !!destination && !samePort && !plan.isPending;
@@ -250,6 +270,18 @@ export default function RoutePlanningPage() {
             </div>
           </div>
 
+          {resumable && (
+            <div className="note" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+              <span>
+                Last voyage on record: <strong>{resumable.departure.port.name}</strong> →{' '}
+                <strong>{resumable.destination.port.name}</strong>
+              </span>
+              <button type="button" className="btn" onClick={() => setRestored(true)}>
+                Show it
+              </button>
+            </div>
+          )}
+
           {plan.isPending && (
             <div className="note" style={{ marginTop: 12 }}>
               Assembling the forecast snapshot and running the route search. The first request for a forecast window
@@ -317,6 +349,7 @@ export default function RoutePlanningPage() {
             horizon={horizon}
             riskMode="all"
             showHistory={false}
+            focusOverride={routeFocus}
             sceneChildren={shown?.waypoints?.length ? <RouteLayer waypoints={shown.waypoints} /> : null}
           />
 

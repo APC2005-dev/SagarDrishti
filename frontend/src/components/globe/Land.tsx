@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 
 import { COLORS } from '../../constants';
-import { type LandGeometry, loadAntarctica } from './antarcticaGeometry';
+import { type LandGeometry, loadAntarctica, loadSouthernIslands } from './antarcticaGeometry';
 
 export const LAND_HEIGHT = 0.045;
 
@@ -13,12 +13,18 @@ export const LAND_HEIGHT = 0.045;
  */
 export function Land({ map, onError }: { map: THREE.Texture | null; onError?: (msg: string) => void }) {
   const [land, setLand] = useState<LandGeometry | null>(null);
+  const [islands, setIslands] = useState<LandGeometry | null>(null);
 
   useEffect(() => {
     let alive = true;
     loadAntarctica()
       .then((g) => alive && setLand(g))
       .catch((e: unknown) => onError?.(e instanceof Error ? e.message : String(e)));
+    // Sub-Antarctic islands are loaded separately and are non-fatal: if they
+    // fail, the continent still renders exactly as before.
+    loadSouthernIslands()
+      .then((g) => alive && setIslands(g))
+      .catch(() => undefined);
     return () => {
       alive = false;
     };
@@ -57,6 +63,46 @@ export function Land({ map, onError }: { map: THREE.Texture | null; onError?: (m
     return [top, sides];
   }, [map]);
 
+  // Islands are drawn as their own slab in a flat land colour. The basemap
+  // mosaic covers the Antarctic region only, so texturing them would sample
+  // outside it; keeping them separate also leaves the continent path untouched.
+  const islandGeometry = useMemo(() => {
+    if (!islands?.shapes.length) return null;
+    const g = new THREE.ExtrudeGeometry(islands.shapes, { depth: LAND_HEIGHT, bevelEnabled: false, curveSegments: 1 });
+    g.computeVertexNormals();
+    return g;
+  }, [islands]);
+
+  const islandCoast = useMemo(() => {
+    if (!islands?.outlines.length) return null;
+    const pos: number[] = [];
+    for (const ring of islands.outlines) {
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i]!;
+        const b = ring[(i + 1) % ring.length]!;
+        pos.push(a[0], LAND_HEIGHT + 0.001, a[1], b[0], LAND_HEIGHT + 0.001, b[1]);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    return g;
+  }, [islands]);
+
+  const islandMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: COLORS.land,
+        roughness: 0.95,
+        metalness: 0,
+        emissive: '#1c2233',
+        emissiveIntensity: 0.35,
+      }),
+    [],
+  );
+
+  useEffect(() => () => islandGeometry?.dispose(), [islandGeometry]);
+  useEffect(() => () => islandCoast?.dispose(), [islandCoast]);
+  useEffect(() => () => islandMaterial.dispose(), [islandMaterial]);
   useEffect(() => () => extruded?.dispose(), [extruded]);
   useEffect(() => () => coast?.dispose(), [coast]);
   useEffect(() => () => materials.forEach((m) => m.dispose()), [materials]);
@@ -68,6 +114,14 @@ export function Land({ map, onError }: { map: THREE.Texture | null; onError?: (m
       <lineSegments geometry={coast}>
         <lineBasicMaterial color={COLORS.landEdge} transparent opacity={map ? 0.3 : 0.55} />
       </lineSegments>
+      {islandGeometry && (
+        <mesh geometry={islandGeometry} material={islandMaterial} rotation={[-Math.PI / 2, 0, 0]} />
+      )}
+      {islandCoast && (
+        <lineSegments geometry={islandCoast}>
+          <lineBasicMaterial color={COLORS.landEdge} transparent opacity={0.55} />
+        </lineSegments>
+      )}
     </group>
   );
 }
