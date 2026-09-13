@@ -26,6 +26,7 @@ interface Props {
   showLegend?: boolean;
   showHistory?: boolean;
   showLayerToggles?: boolean;
+  isRoutePlanning?: boolean;
   /** Overlay markup rendered above the canvas (HTML). */
   children?: React.ReactNode;
   /** Extra 3D layers rendered INSIDE the canvas, where R3F hooks work. */
@@ -34,7 +35,7 @@ interface Props {
   focusOverride?: [number, number] | null;
 }
 
-function Legend({ hasForecasts }: { hasForecasts: boolean }) {
+function Legend({ hasForecasts, isRoutePlanning }: { hasForecasts: boolean; isRoutePlanning?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -93,14 +94,18 @@ function Legend({ hasForecasts }: { hasForecasts: boolean }) {
                 </div>
               </>
             )}
-            <div className="legend-row">
-              <span className="legend-swatch sw-dep-port" />
-              Departure port
-            </div>
-            <div className="legend-row">
-              <span className="legend-swatch sw-dest-port" />
-              Destination port
-            </div>
+            {isRoutePlanning && (
+              <>
+                <div className="legend-row">
+                  <span className="legend-swatch sw-dep-port" />
+                  Departure port
+                </div>
+                <div className="legend-row">
+                  <span className="legend-swatch sw-dest-port" />
+                  Destination port
+                </div>
+              </>
+            )}
             <div className="legend-row">
               <span className="legend-swatch sw-history" />
               Past track (selected)
@@ -121,6 +126,7 @@ export function AntarcticScene({
   showLegend = true,
   showHistory = true,
   showLayerToggles = true,
+  isRoutePlanning = false,
   children,
   sceneChildren,
   focusOverride = null,
@@ -201,7 +207,7 @@ export function AntarcticScene({
           <LayerToggles />
         </div>
       )}
-      {showLegend && <Legend hasForecasts={forecasts.length > 0} />}
+      {showLegend && <Legend hasForecasts={forecasts.length > 0} isRoutePlanning={isRoutePlanning} />}
       {children}
     </div>
   );

@@ -67,11 +67,12 @@ function hoursLabel(hours: number | null | undefined): string {
 function ResultCard({ route }: { route: Route }) {
   const num = (v: number | null | undefined, digits: number) =>
     typeof v === 'number' && Number.isFinite(v) ? v.toFixed(digits) : '—';
+  const isFeasible = route.status === 'FEASIBLE';
   return (
     <div className="panel card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-        <h3 style={{ margin: 0 }}>Route found</h3>
-        <Chip tone="ok">{route.status}</Chip>
+        <h3 style={{ margin: 0 }}>{isFeasible ? 'Route found' : 'Route result'}</h3>
+        <Chip tone={isFeasible ? 'ok' : 'neutral'}>{route.status}</Chip>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 12 }}>
         <Metric label="Departure" value={route.departure.port.name} />
@@ -118,6 +119,12 @@ export default function RoutePlanningPage() {
       void queryClient.invalidateQueries({ queryKey: ['activeRouteDetail'] });
     },
   });
+
+  const handleCancel = () => {
+    setRoute(null);
+    setRestored(false);
+    plan.reset();
+  };
 
   const resumable = !shown && !plan.isPending ? (persisted.data ?? null) : null;
 
@@ -279,13 +286,13 @@ export default function RoutePlanningPage() {
             </div>
           )}
 
-          {failure && (
-            <div className="panel card" style={{ marginTop: 12, borderColor: 'var(--bad)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                <strong>Route not produced</strong>
+          {failure && plan.isError && (
+            <div className="panel card" style={{ marginTop: 16, borderColor: 'var(--bad)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                <strong style={{ color: 'var(--bad)' }}>Route not produced</strong>
                 {failure.code && <Chip tone="bad">{failure.code}</Chip>}
               </div>
-              <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+              <p className="muted" style={{ fontSize: 13, marginTop: 8, marginBottom: 0 }}>
                 {(failure.code && ERROR_HELP[failure.code]) ?? failure.message}
               </p>
             </div>
@@ -327,13 +334,14 @@ export default function RoutePlanningPage() {
             </div>
           )}
 
-          <RouteScanner active={plan.isPending} onCancel={() => plan.reset()} />
+          <RouteScanner active={plan.isPending} onCancel={handleCancel} />
           <AntarcticScene
             icebergs={icebergs.data?.items ?? []}
             forecasts={forecasts.data ?? []}
             horizon={horizon}
             riskMode="all"
             showHistory={false}
+            isRoutePlanning
             focusOverride={routeFocus}
             sceneChildren={!plan.isPending && shown?.waypoints?.length ? <RouteLayer waypoints={shown.waypoints} /> : null}
           />
