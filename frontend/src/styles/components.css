@@ -45,7 +45,7 @@
 }
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -53,6 +53,7 @@
 .brand-mark {
   color: var(--official);
   font-size: 15px;
+  line-height: 0;
 }
 .brand-name {
   font-weight: 600;
