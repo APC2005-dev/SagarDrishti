@@ -114,7 +114,7 @@ export function ConcentrationMap({ field, size }: { field: SeaIceField; size?: n
         style={{ width: activeSize, height: activeSize, maxWidth: '100%', aspectRatio: '1/1' }}
         aria-label={`Sea-ice concentration, ${field.kind}, valid ${field.validDate}`}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11 }} className="mono">
+      <div className="seaice-map-legend mono">
         <span className="dim">{Math.round(field.minConcentration * 100)}%</span>
         <span
           style={{

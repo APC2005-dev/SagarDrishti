@@ -32,11 +32,11 @@ function ModelCard({ status }: { status: SeaIceStatus }) {
         <h3 className="mono" style={{ margin: 0 }}>{model.version}</h3>
         <Chip tone={toneFor(model.status)}>{model.status.toUpperCase()}</Chip>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 12 }}>
+      <div className="seaice-model-metrics" style={{ marginTop: 12 }}>
         <Metric label="Architecture" value={model.architecture} sub={model.architectureVersion} />
         <Metric label="Input window" value={`${model.inputWindowEntries} entries`} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 10 }}>
+      <div className="seaice-model-rmse" style={{ marginTop: 10 }}>
         <Metric label="Day-1 RMSE" value={model.day1Rmse?.toFixed(5) ?? '—'} />
         <Metric label="Day-3 RMSE" value={model.day3Rmse?.toFixed(5) ?? '—'} />
         <Metric label="Day-7 RMSE" value={model.day7Rmse?.toFixed(5) ?? '—'} />
@@ -75,14 +75,14 @@ export default function SeaIceForecastPage() {
 
             {!s.sourceConfigured && <div className="note">{s.sourceReason}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 480px) minmax(380px, 1fr)', gap: 20, alignItems: 'start' }}>
+            <div className="seaice-layout">
               <div>
                 <SectionTitle>Deployed model</SectionTitle>
                 <ModelCard status={s} />
 
                 <SectionTitle>Official data window</SectionTitle>
                 <div className="panel card">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+                  <div className="seaice-window-metrics">
                     <Metric label="Stored observations" value={s.observationCount.toLocaleString()} />
                     <Metric label="Latest official" value={s.latestObservation ? fmtDate(s.latestObservation.observationDate) : '—'} />
                     <Metric label="Window" value={`${s.window.length}/${s.windowEntriesRequired} entries`} />
@@ -177,7 +177,7 @@ export default function SeaIceForecastPage() {
               <div>
                 <SectionTitle>Concentration field</SectionTitle>
                 <div className="panel card">
-                  <div className="segmented" role="radiogroup" aria-label="Sea-ice field" style={{ marginBottom: 12 }}>
+                  <div className="segmented seaice-field-selector" role="radiogroup" aria-label="Sea-ice field" style={{ marginBottom: 12 }}>
                     {([null, ...horizons] as (number | null)[]).map((h) => (
                       <button
                         key={h ?? 'observed'}
